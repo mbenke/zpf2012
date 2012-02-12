@@ -1,0 +1,13 @@
+* Types
+** Oleg: http://okmij.org/ftp/Haskell/types.html
+
+* Parallel Haskell
+** Przecwiczyc i opisac Criterion +-
+** Repa - http://hackage.haskell.org/package/repa
+** Data.Array.Accelerate  - https://github.com/mchakravarty/accelerate
+** Control.Parallel.Strategies
+** Andres Löh tutorial http://www.well-typed.com/Hal6/
+** simonmar tutorial http://community.haskell.org/~simonmar/par-tutorial.pdf
+
+* Varia
+** Conduits http://www.yesodweb.com/book/conduit

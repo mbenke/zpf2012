@@ -1,0 +1,20 @@
+[ben@students tmp]$ ~/.cabal/bin/dph-dotp +RTS -N20 -RTS vectorised 100000000
+elapsedTimeMS   = 255
+cpuTimeMS       = 2010
+2.5001873512
+[ben@students tmp]$ ~/.cabal/bin/dph-dotp +RTS -N10 -RTS vectorised 100000000
+elapsedTimeMS   = 295
+cpuTimeMS       = 1380
+2.5001873512
+[ben@students tmp]$ ~/.cabal/bin/dph-dotp +RTS -N5 -RTS vectorised 100000000
+elapsedTimeMS   = 305
+cpuTimeMS       = 1170
+2.5001873512
+[ben@students tmp]$ ~/.cabal/bin/dph-dotp +RTS -N2 -RTS vectorised 100000000
+elapsedTimeMS   = 334
+cpuTimeMS       = 670
+2.5001873512
+[ben@students tmp]$ ~/.cabal/bin/dph-dotp +RTS -N1 -RTS vectorised 100000000
+elapsedTimeMS   = 637
+cpuTimeMS       = 640
+2.5001873512
