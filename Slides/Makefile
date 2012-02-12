@@ -10,4 +10,4 @@ $(L).html: $(L).md
 
 $(L)-slides.html: $(L).md #$(wildcard ../pandoc/slidy/*)
 	@test -f $<
-	$(PANDOC) --offline -s -t slidy -o $@ $<
+	$(PANDOC) --data-dir=./pandoc --offline -s -t slidy -o $@ $<
