@@ -6,8 +6,8 @@ all: $(L).html $(L)-slides.html
 
 $(L).html: $(L).md
 	@test -f $<
-	$(PANDOC) -s -t html -o $@ $<
+	$(PANDOC) -s -t html --mathjax -o $@ $<
 
-$(L)-slides.html: $(L).md #$(wildcard ../pandoc/slidy/*)
+$(L)-slides.html: $(L).md Makefile $(wildcard ./pandoc/slidy/*)
 	@test -f $<
-	$(PANDOC) --data-dir=./pandoc --offline -s -t slidy -o $@ $<
+	$(PANDOC) --data-dir=./pandoc --offline -s -t slidy --mathjax -o $@ $<

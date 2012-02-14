@@ -3,7 +3,9 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="generator" content="pandoc" />
-  <title></title>
+  <meta name="author" content="Marcin Benke" />
+  <meta name="date" content="15 lutego 2012" />
+  <title>Zaawansowane programowanie funkcyjne</title>
   <style type="text/css">
 /*<![CDATA[*/
 table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode, table.sourceCode pre 
@@ -25,8 +27,15 @@ code.sourceCode span.re { }
 code.sourceCode span.er { color: red; font-weight: bold; }
 /*]]>*/
   </style>
+  <script src="https://d3eoax9i5htok0.cloudfront.net/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 </head>
 <body>
+<div id="header">
+<h1 class="title">Zaawansowane programowanie funkcyjne</h1>
+<h3 class="author">Marcin Benke</h3>
+<h4 class="date">15 lutego 2012</h4>
+</div>
+<meta name="duration" content="80" />
 <h1 id="plan-wyk&#322;adu">Plan wykładu</h1>
 <ul>
 <li>Typy i klasy (ok. 3 wykładów)
@@ -36,6 +45,7 @@ code.sourceCode span.er { color: red; font-weight: bold; }
 <li>Klasy wieloparametrowe, zależności funkcyjne</li>
 <li>Rodziny typów, typy skojarzone, uogólnione typy algebraiczne (GADT)</li>
 </ul></li>
+<li>Typy zależne, Agda, Alonzo</li>
 <li>Metody kontrolowania efektów w języku funkcyjnym (ok. 6 wykładów)
 <ul>
 <li>Rodzaje efektów (błędy, stan, I/O, nawracanie)</li>
@@ -52,35 +62,22 @@ code.sourceCode span.er { color: red; font-weight: bold; }
 </ul></li>
 <li>Prezentacje projektów</li>
 </ul>
+<p>Jakieś życzenia?</p>
+<h1 id="zasady-zaliczania">Zasady zaliczania</h1>
+<ul>
+<li>Laboratorium: projekt 1-3 osobowy.</li>
+<li>Egzamin ustny, którego istotną częścią jest prezentacja projektu.</li>
+<li>Alternatywna forma zaliczenia: referat (koniecznie ciekawy!)</li>
+<li>...możliwe także inne formy.</li>
+</ul>
 <h1 id="j&#281;zyki-funkcyjne">Języki funkcyjne</h1>
 <ul>
 <li>typowane dynamicznie, gorliwe: Lisp</li>
 <li>typowane statycznie, gorliwe, nieczyste: ML</li>
 <li>typowane statycznie, leniwe, czyste: Haskell</li>
 </ul>
-<p>Types are a design language - SPJ</p>
-<h1 id="typy-w-haskellu">Typy w Haskellu</h1>
-<ul>
-<li>typy bazowe: <code>zeroInt :: Int</code></li>
-<li>typy funkcyjne: <code>plusInt :: Int -&gt; Int -&gt; Int</code></li>
-<li><p>typy polimorficzne <code>id :: a -&gt; a</code></p>
-<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE ExplicitForAll #-}</span><br /><span class="ot">g </span><span class="ot">::</span> forall b<span class="fu">.</span>b <span class="ot">-&gt;</span> b</code></pre></li>
-<li><p>typy algebraiczne</p>
-<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Tree</span> a <span class="fu">=</span> <span class="dt">Leaf</span> <span class="fu">|</span> <span class="dt">Node</span> a (<span class="dt">Tree</span> a) (<span class="dt">Tree</span> a)</code></pre></li>
-<li><p>NB od niedawna Haskell dopuszcza puste typy:</p>
-<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Zero</span></code></pre></li>
-<li><p><code>Tree</code> jest <em>konstruktorem typowym</em>, czyli operacją na typach</p></li>
-</ul>
-<h1 id="operacje-na-typach">Operacje na typach</h1>
-<ul>
-<li><p>Konstruktory typowe transformują typy</p></li>
-<li><p><code>Tree</code> może zamienić np. <code>Int</code> w drzewo</p></li>
-</ul>
-<h1 id="klasy">Klasy</h1>
-<ul>
-<li><p>klasy opisują własności typów</p>
-<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">class</span> <span class="kw">Eq</span> a <span class="kw">where</span><br /><span class="ot">  (==) </span><span class="ot">::</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span><br /><span class="kw">instance</span> <span class="kw">Eq</span> <span class="dt">Bool</span> <span class="kw">where</span><br />   <span class="kw">True</span>  <span class="fu">==</span> <span class="kw">True</span>  <span class="fu">=</span> <span class="kw">True</span><br />   <span class="kw">False</span> <span class="fu">==</span> <span class="kw">False</span> <span class="fu">=</span> <span class="kw">True</span><br />   _     <span class="fu">==</span> _     <span class="fu">=</span> <span class="kw">False</span></code></pre></li>
-</ul>
+<p>Ten wykład: Haskell, ze szczególnym naciskiem na typy.</p>
+<p>Bogata struktura typów jest tym , co wyróżnia Haskell wśród innych języków.</p>
 <h1 id="typy-jako-j&#281;zyk-specyfikacji">Typy jako język specyfikacji</h1>
 <p>Typ funkcji często specyfikuje nie tylko jej wejście i wyjście ale i relacje między nimi:</p>
 <pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">f </span><span class="ot">::</span> forall a<span class="fu">.</span> a <span class="ot">-&gt;</span> a<br />f x <span class="fu">=</span> <span class="fu">?</span></code></pre>
@@ -125,17 +122,169 @@ add three one :: Succ (Succ (Succ (Succ Zero)))
 <pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Zero</span> <span class="fu">=</span> <span class="dt">Zero</span><br /><span class="kw">data</span> <span class="dt">Suc</span> n <span class="fu">=</span> <span class="dt">Suc</span> n<br /><br /><span class="kw">type</span> family m <span class="fu">:+</span> n<br /><span class="kw">type</span> <span class="kw">instance</span> <span class="dt">Zero</span> <span class="fu">:+</span> n <span class="fu">=</span> n<br /><span class="kw">type</span> <span class="kw">instance</span> (<span class="dt">Suc</span> m) <span class="fu">:+</span> n <span class="fu">=</span> <span class="dt">Suc</span>(m<span class="fu">:+</span>n)<br /><br /><span class="kw">data</span> <span class="dt">Vec</span><span class="ot"> </span><span class="ot">::</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span><br />  <span class="dt">VNil</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">Vec</span> <span class="dt">Zero</span> a  <br /><span class="ot">  (:&gt;) </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (<span class="dt">Suc</span> n) a<br /><br /><span class="ot">vhead </span><span class="ot">::</span> <span class="dt">Vec</span> (<span class="dt">Suc</span> n) a <span class="ot">-&gt;</span> a<br /><span class="ot">vappend </span><span class="ot">::</span> <span class="dt">Vec</span> m a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m<span class="fu">:+</span>n) a</code></pre></li>
 <li><p>Sprytna sztuczka o wątpliwej wartości praktycznej</p></li>
 </ul>
-<h1 id="podklasy">Podklasy</h1>
+<h1 id="typy-zale&#380;ne">Typy zależne</h1>
+<p>Prawdziwe programowanie na poziomie typów i dowodzenie własności programów możliwe w języku z typami zależnymi, takim jak Agda, Epigram, Idris</p>
+<pre><code>module Data.Vec where
+infixr 5 _∷_
+
+data Vec (A : Set a) : ℕ → Set where
+  []  : Vec A zero
+  _∷_ : ∀ {n} (x : A) (xs : Vec A n) → Vec A (suc n)
+
+_++_ : ∀ {a m n} {A : Set a} → Vec A m → Vec A n → Vec A (m + n)
+[]       ++ ys = ys
+(x ∷ xs) ++ ys = x ∷ (xs ++ ys)
+
+module UsingVectorEquality {s₁ s₂} (S : Setoid s₁ s₂) where
+  xs++[]=xs : ∀ {n} (xs : Vec A n) → xs ++ [] ≈ xs
+  xs++[]=xs []       = []-cong
+  xs++[]=xs (x ∷ xs) = SS.refl ∷-cong xs++[]=xs xs
+</code></pre>
+<h1 id="problem-z-typami-zale&#380;nymi">Problem z typami zależnymi</h1>
+<p>O ile Haskell bywa czasami nieczytelny, to z typami zależnymi całkiem łatwo przesadzić:</p>
+<pre><code>  now-or-never : Reflexive _∼_ →
+                 ∀ {k} (x : A ⊥) →
+                 ¬ ¬ ((∃ λ y → x ⇓[ other k ] y) ⊎ x ⇑[ other k ])
+  now-or-never refl x = helper &lt;$&gt; excluded-middle
+    where
+    open RawMonad ¬¬-Monad
+
+    not-now-is-never : (x : A ⊥) → (∄ λ y → x ≳ now y) → x ≳ never
+    not-now-is-never (now x)   hyp with hyp (, now refl)
+    ... | ()
+    not-now-is-never (later x) hyp =
+      later (♯ not-now-is-never (♭ x) (hyp ∘ Prod.map id laterˡ))
+
+    helper : Dec (∃ λ y → x ≳ now y) → _
+    helper (yes ≳now) = inj₁ $ Prod.map id ≳⇒ ≳now
+    helper (no  ≵now) = inj₂ $ ≳⇒ $ not-now-is-never x ≵now
+</code></pre>
+<p>...chociaż oczywiście pisanie takich dowodów jest świetną zabawą.</p>
+<h1 id="data-parallel-haskell">Data Parallel Haskell</h1>
+<p>Dokąd chcemy dojść:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE ParallelArrays #-}</span><br /><span class="ot">{-# OPTIONS_GHC -fvectorise #-}</span><br /><br /><span class="kw">module</span> <span class="dt">DotP</span> <span class="kw">where</span><br /><span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Prelude</span><br /><span class="kw">import</span> <span class="dt">Data.Array.Parallel</span><br /><span class="kw">import</span> <span class="dt">Data.Array.Parallel.Prelude</span><br /><span class="kw">import</span> <span class="dt">Data.Array.Parallel.Prelude.Double</span> <span class="kw">as</span> <span class="dt">D</span><br /><br /><span class="ot">dotp_double </span><span class="ot">::</span> [<span class="fu">:</span><span class="dt">Double</span><span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span><span class="dt">Double</span><span class="fu">:</span>] <span class="ot">-&gt;</span> <span class="dt">Double</span><br />dotp_double xs ys <span class="fu">=</span> D.sumP [<span class="fu">:</span>x <span class="fu">*</span> y <span class="fu">|</span> x <span class="ot">&lt;-</span> xs <span class="fu">|</span> y <span class="ot">&lt;-</span> ys<span class="fu">:</span>]</code></pre>
+<p>Wygląda jak operacja na listach, ale działa na tablicach i &quot;automagicznie&quot; zrównolegla się na dowolną liczbę rdzeni/procesorów (także CUDA).</p>
+<p>Po drodze czeka nas jednak trochę pracy.</p>
+<h1 id="typy-w-haskellu">Typy w Haskellu</h1>
+<ul>
+<li>typy bazowe: <code>zeroInt :: Int</code></li>
+<li>typy funkcyjne: <code>plusInt :: Int -&gt; Int -&gt; Int</code></li>
+<li><p>typy polimorficzne <code>id :: a -&gt; a</code></p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE ExplicitForAll #-}</span><br /><span class="ot">g </span><span class="ot">::</span> forall b<span class="fu">.</span>b <span class="ot">-&gt;</span> b</code></pre></li>
+<li><p>typy algebraiczne</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Tree</span> a <span class="fu">=</span> <span class="dt">Leaf</span> <span class="fu">|</span> <span class="dt">Node</span> a (<span class="dt">Tree</span> a) (<span class="dt">Tree</span> a)</code></pre></li>
+<li><p><code>Leaf</code> i <code>Node</code> są konstruktorami wartości:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Tree</span> a <span class="kw">where</span><br />     <span class="dt">Leaf</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">Tree</span> a<br />     <span class="dt">Node</span><span class="ot"> </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">Tree</span> a <span class="ot">-&gt;</span> <span class="dt">Tree</span> a <span class="ot">-&gt;</span> <span class="dt">Tree</span> a</code></pre></li>
+<li><p><code>Tree</code> jest <em>konstruktorem typowym</em>, czyli operacją na typach</p></li>
+<li><p>NB od niedawna Haskell dopuszcza puste typy:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Zero</span></code></pre></li>
+</ul>
+<h1 id="typowanie-polimorficzne">Typowanie polimorficzne</h1>
+<ul>
+<li>Generalizacja:</li>
+</ul>
+<p>\[{\Gamma \vdash e :: t, a \notin FV( \Gamma )}\over {\Gamma \vdash e :: \forall a.t}\]</p>
+<!-- 
+Jeśli $\Gamma \vdash e :: t, a \notin FV( \Gamma )$
+
+to $\Gamma \vdash e :: \forall a.t$
+
+  Γ ⊢ e :: t, a∉FV(Γ)
+$$\Gamma \vdash e :: t$$ ,
+ \(a \not\in FV(\Gamma) \) , 
+to $\Gamma \vdash e :: \forall a.t$
+-->
+<p>Na przykład</p>
+<p>\[{ { \vdash map :: (a\to b) \to [a] \to [b] } \over
+   { \vdash map :: \forall b. (a\to b) \to [a] \to [b] } } \over
+   { \vdash map :: \forall a. \forall b. (a\to b) \to [a] \to [b] } \]</p>
+<p>Uwaga:</p>
+<p>\[ f : a \to b \not \vdash map\; f :: \forall b. [a] \to [b]  \]</p>
+<ul>
+<li>Instancjacja</li>
+</ul>
+<p>\[ {\Gamma \vdash e :: \forall a.t}\over {\Gamma \vdash e :: t[a:=s]} \]</p>
+<h1 id="klasy">Klasy</h1>
+<ul>
+<li><p>klasy opisują własności typów</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">class</span> <span class="kw">Eq</span> a <span class="kw">where</span><br /><span class="ot">  (==) </span><span class="ot">::</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span><br /><span class="kw">instance</span> <span class="kw">Eq</span> <span class="dt">Bool</span> <span class="kw">where</span><br />   <span class="kw">True</span>  <span class="fu">==</span> <span class="kw">True</span>  <span class="fu">=</span> <span class="kw">True</span><br />   <span class="kw">False</span> <span class="fu">==</span> <span class="kw">False</span> <span class="fu">=</span> <span class="kw">True</span><br />   _     <span class="fu">==</span> _     <span class="fu">=</span> <span class="kw">False</span></code></pre></li>
+<li><p>funkcje mogą być definiowane w kontekście klas:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="fu">elem</span><span class="ot"> </span><span class="ot">::</span> <span class="kw">Eq</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> [a] <span class="ot">-&gt;</span> <span class="dt">Bool</span></code></pre></li>
+<li>Implementacja
+<ul>
+<li>instancja tłumaczona na słownik metod (coś 'a la vtable w C++)</li>
+<li>kontekst (np Eq a) jest tłumaczony na ukryty parametr (słownik metod )</li>
+<li>podklasa tłumaczona na funkcję</li>
+</ul></li>
+</ul>
+<p>Patrz <code>Code/Class0/B*</code></p>
+<h1 id="b.hs">B.hs</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">B</span> <span class="kw">where</span><br /><span class="kw">data</span> <span class="dt">B</span> <span class="fu">=</span> <span class="dt">F</span> <span class="fu">|</span> <span class="dt">T</span><br /><br /><span class="ot">n </span><span class="ot">::</span> <span class="dt">B</span> <span class="ot">-&gt;</span> <span class="dt">B</span><br />n <span class="dt">T</span> <span class="fu">=</span> <span class="dt">F</span><br />n <span class="dt">F</span> <span class="fu">=</span> <span class="dt">T</span><br /><br /><span class="kw">class</span> <span class="dt">E</span> a <span class="kw">where</span><br /><span class="ot">  eq </span><span class="ot">::</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">B</span><br /><br /><span class="kw">instance</span> <span class="dt">E</span> <span class="dt">B</span> <span class="kw">where</span> <br />  eq x y <span class="fu">=</span> <span class="kw">case</span> x <span class="kw">of</span><br />    <span class="dt">T</span> <span class="ot">-&gt;</span> y<br />    <span class="dt">F</span> <span class="ot">-&gt;</span> <span class="kw">case</span> y <span class="kw">of</span> <br />      <span class="dt">T</span> <span class="ot">-&gt;</span> <span class="dt">F</span><br />      <span class="dt">F</span> <span class="ot">-&gt;</span> <span class="dt">T</span><br /><br /><span class="ot">neq </span><span class="ot">::</span> <span class="dt">E</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">B</span><br />neq x y <span class="fu">=</span> n (eq x y)</code></pre>
+<p>Tłumaczenie na Haskell Core mozemy uzyskać przez</p>
+<pre><code>ghc -c -fext-core B.hs
+</code></pre>
+<h1 id="klasy-w-haskell-core">Klasy w Haskell Core</h1>
+<pre><code>  %data B =
+    {F;
+     T};
+  %newtype DicE CoDE a
+    = a -&gt; a -&gt; B;
+
+-- DicE a to slownik metod
+-- CoDE :: (DicE a) ~ (a -&gt; a -&gt; B) -- koercja
+-- newtype jest tylko optymalizacja (bo tylko jedna metoda)
+-- w gruncie rzeczy mogłoby być 
+--   %data DicE
+-- eq to selektor metody ma typ mniej wiecej taki:
+
+-- forall a. (DicE a) -&gt; a -&gt; a -&gt; B
+  eq :: %forall a . (DicE a) -&gt; a -&gt; a -&gt; B =
+    \ @ a (d::(DicE a)) -&gt;
+        %cast d
+        (CoDE a); -- wyjęcie metody typu (a -&gt; a -&gt; B) ze słownika d
+
+-- n jest &quot;zwykla funkcja&quot;
+  n :: B -&gt; B =
+    \ (dsdc0::B) -&gt;
+        %case B dsdc0 %of {F -&gt; T; T -&gt; F};
+
+-- neq :: forall a. (dE :: slownikE a) -&gt; a -&gt; a -&gt; B
+-- n, eq rozwiniete
+  neq :: %forall a . (DicE a) -&gt; a -&gt; a -&gt; B =
+    \ @ a0  -- a0 jest typem (tzw &quot;duża lambda&quot;, Λa.M)
+      (dicE::(DicE a0))
+      (x::a0)
+      (y::a0) -&gt;
+-- case m_eq dicE x y :: B of
+        %case B ((%cast (dicE)
+                         ((CoDE a0)))
+                        x y)  
+        %of {F -&gt; T; T -&gt; F};
+</code></pre>
+<h1 id="podklasy-konteksty-klas">Podklasy (konteksty klas)</h1>
 <ul>
 <li><p>Jeśli typ a jest klasy C i są zdefiniowane funkcje ... to jest klasy D</p>
 <pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">class</span> <span class="kw">Eq</span> a <span class="ot">=&gt;</span> <span class="kw">Ord</span> a <span class="kw">where</span><br /><span class="ot">  compare </span><span class="ot">::</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Ordering</span><br /><span class="ot">  (&lt;) </span><span class="ot">::</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span><br />  <span class="fu">...</span></code></pre></li>
+<li><p>Oczywiście mają niewiele wspólnego z podklasami obiektowymi, ale używa się takiego skrótu. Prawdopodobnie lepiej myśleć o kontekstach klas.</p></li>
 <li><p>Graf podklas musi być acykliczny</p></li>
 <li><p>Specyfikowanie nadklas jest kwestią smaku - można dyskutować, czy <code>Eq</code> rzeczywiście jest niezbędne dla <code>Ord</code>, albo czy każda instancja <code>Monad</code> musi być instancją <code>Functor</code>.</p></li>
 </ul>
+<p>Patrz <code>Code/Trivia/C*</code></p>
+<h1 id="c.hs">C.hs</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">module</span> <span class="dt">C</span> <span class="kw">where</span><br /><br /><span class="kw">class</span> <span class="dt">C1</span> a <span class="kw">where</span><br /><span class="ot">  m0 </span><span class="ot">::</span> a <br /><span class="ot">  m1 </span><span class="ot">::</span> a <span class="ot">-&gt;</span> a<br /><br /><span class="kw">class</span> <span class="dt">C1</span> a <span class="ot">=&gt;</span> <span class="dt">C2</span> a <span class="kw">where</span><br /><span class="ot">  m2 </span><span class="ot">::</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> a</code></pre>
+<h1 id="c.hcr">C.hcr</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="fu">%</span><span class="kw">module</span> main<span class="fu">:</span><span class="dt">C</span><br />  <span class="fu">%</span><span class="kw">data</span> <span class="dt">TZCC1</span> aabv <span class="fu">=</span><br />    {<span class="dt">DZCC1</span> aabv (aabv <span class="ot">-&gt;</span> aabv)};<br />  <span class="fu">%</span><span class="kw">data</span> <span class="dt">TZCC2</span> aabu <span class="fu">=</span><br />    {<span class="dt">DZCC2</span> ((<span class="dt">TZCC1</span> aabu)) (aabu <span class="ot">-&gt;</span> aabu <span class="ot">-&gt;</span> aabu)};<br /><span class="ot">  zdp1C2 </span><span class="ot">::</span> <span class="fu">%</span>forall aabu <span class="fu">.</span> (<span class="dt">TZCC2</span> aabu) <span class="ot">-&gt;</span><br />                                  (<span class="dt">TZCC1</span> aabu) <span class="fu">=</span><br />    \ <span class="fu">@</span> aabu (<span class="ot">tplB1</span><span class="ot">::</span>(<span class="dt">TZCC2</span> aabu)) <span class="ot">-&gt;</span><br />        <span class="fu">%</span><span class="kw">case</span> ((<span class="dt">TZCC1</span> aabu)) tplB1 <span class="fu">%</span><span class="kw">of</span> (<span class="ot">tplX4</span><span class="ot">::</span>(<span class="dt">TZCC2</span> aabu))<br />          {<span class="dt">DZCC2</span><br />           (<span class="ot">tplB2</span><span class="ot">::</span>(<span class="dt">TZCC1</span> aabu)) (<span class="ot">tplB3</span><span class="ot">::</span>aabu <span class="ot">-&gt;</span> aabu <span class="ot">-&gt;</span> aabu) <span class="ot">-&gt;</span><br />             tplB2};<br /><span class="ot">  m2 </span><span class="ot">::</span> <span class="fu">%</span>forall aabu <span class="fu">.</span> (<span class="dt">TZCC2</span> aabu) <span class="ot">-&gt;</span><br />                              aabu <span class="ot">-&gt;</span> aabu <span class="ot">-&gt;</span> aabu <span class="fu">=</span><br />    \ <span class="fu">@</span> aabu (<span class="ot">tplB1</span><span class="ot">::</span>(<span class="dt">TZCC2</span> aabu)) <span class="ot">-&gt;</span><br />        <span class="fu">%</span><span class="kw">case</span> (aabu <span class="ot">-&gt;</span> aabu <span class="ot">-&gt;</span> aabu) tplB1 <span class="fu">%</span><span class="kw">of</span> (<span class="ot">tplX4</span><span class="ot">::</span>(<span class="dt">TZCC2</span> aabu))<br />          {<span class="dt">DZCC2</span><br />           (<span class="ot">tplB2</span><span class="ot">::</span>(<span class="dt">TZCC1</span> aabu)) (<span class="ot">tplB3</span><span class="ot">::</span>aabu <span class="ot">-&gt;</span> aabu <span class="ot">-&gt;</span> aabu) <span class="ot">-&gt;</span><br />             tplB3};<br /><span class="ot">  m0 </span><span class="ot">::</span> <span class="fu">%</span>forall aabv <span class="fu">.</span> (<span class="dt">TZCC1</span> aabv) <span class="ot">-&gt;</span> aabv <span class="fu">=</span><br />    \ <span class="fu">@</span> aabv (<span class="ot">tplB1</span><span class="ot">::</span>(<span class="dt">TZCC1</span> aabv)) <span class="ot">-&gt;</span><br />        <span class="fu">%</span><span class="kw">case</span> aabv tplB1 <span class="fu">%</span><span class="kw">of</span> (<span class="ot">tplX4</span><span class="ot">::</span>(<span class="dt">TZCC1</span> aabv))<br />          {<span class="dt">DZCC1</span> (<span class="ot">tplB2</span><span class="ot">::</span>aabv) (<span class="ot">tplB3</span><span class="ot">::</span>aabv <span class="ot">-&gt;</span> aabv) <span class="ot">-&gt;</span><br />             tplB2};<br /><span class="ot">  m1 </span><span class="ot">::</span> <span class="fu">%</span>forall aabv <span class="fu">.</span> (<span class="dt">TZCC1</span> aabv) <span class="ot">-&gt;</span> aabv <span class="ot">-&gt;</span> aabv <span class="fu">=</span><br />    \ <span class="fu">@</span> aabv (<span class="ot">tplB1</span><span class="ot">::</span>(<span class="dt">TZCC1</span> aabv)) <span class="ot">-&gt;</span><br />        <span class="fu">%</span><span class="kw">case</span> (aabv <span class="ot">-&gt;</span> aabv) tplB1 <span class="fu">%</span><span class="kw">of</span> (<span class="ot">tplX4</span><span class="ot">::</span>(<span class="dt">TZCC1</span> aabv))<br />          {<span class="dt">DZCC1</span> (<span class="ot">tplB2</span><span class="ot">::</span>aabv) (<span class="ot">tplB3</span><span class="ot">::</span>aabv <span class="ot">-&gt;</span> aabv) <span class="ot">-&gt;</span><br />             tplB3};</code></pre>
+<h1 id="operacje-na-typach">Operacje na typach</h1>
+<ul>
+<li><p>Konstruktory typowe transformują typy</p></li>
+<li><p><code>Tree</code> może zamienić np. <code>Int</code> w drzewo</p></li>
+<li><p>Funkcje wyższego rzędu transformują funkcje</p></li>
+<li><p>Konstruktory wyższego rzędu transformują konstruktory typów</p></li>
+</ul>
 <h1 id="klasy-konstruktorowe">Klasy konstruktorowe</h1>
 <ul>
-<li><p>klasy konstruktorowe opisują własności konstruktorów typów</p>
-<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">class</span> <span class="kw">Functor</span> f <span class="kw">where</span><br /><span class="ot">  fmap </span><span class="ot">::</span> (a<span class="ot">-&gt;</span>b) <span class="ot">-&gt;</span> f a <span class="ot">-&gt;</span> f b</code></pre></li>
+<li><p>klasy konstruktorowe opisują własności konstruktorów typów:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">class</span> <span class="kw">Functor</span> f <span class="kw">where</span><br /><span class="ot">  fmap </span><span class="ot">::</span> (a<span class="ot">-&gt;</span>b) <span class="ot">-&gt;</span> f a <span class="ot">-&gt;</span> f b<br /><span class="kw">instance</span> <span class="kw">Functor</span> [] <span class="kw">where</span><br />  <span class="fu">fmap</span> <span class="fu">=</span> <span class="fu">map</span><br /><br /><span class="kw">class</span> <span class="kw">Functor</span> f <span class="ot">=&gt;</span> <span class="dt">Pointed</span> f <span class="kw">where</span><br /><span class="ot">   pure </span><span class="ot">::</span> a <span class="ot">-&gt;</span> f a<br /><span class="kw">instance</span> <span class="dt">Pointed</span> [] <span class="kw">where</span><br />   pure <span class="fu">=</span> (<span class="fu">:</span>[])<br /><br /><span class="kw">class</span> <span class="dt">Pointed</span> f <span class="ot">=&gt;</span> <span class="dt">Applicative</span> f <span class="kw">where</span><br /><span class="ot">  (&lt;*&gt;) </span><span class="ot">::</span> f(a<span class="ot">-&gt;</span>b) <span class="ot">-&gt;</span> f a <span class="ot">-&gt;</span> f b <br /><span class="ot">  (*&gt;) </span><span class="ot">::</span> f a <span class="ot">-&gt;</span> f b <span class="ot">-&gt;</span> f b<br />  x <span class="fu">*&gt;</span> y <span class="fu">=</span> (<span class="fu">flip</span> <span class="fu">const</span>) <span class="fu">&lt;$&gt;</span> x <span class="fu">&lt;*&gt;</span> y<br /><span class="ot">  (&lt;*) </span><span class="ot">::</span> f a <span class="ot">-&gt;</span> f b <span class="ot">-&gt;</span> f a<br />  x <span class="fu">&lt;*</span> y <span class="fu">=</span> <span class="fu">const</span> <span class="fu">&lt;$&gt;</span> x <span class="fu">&lt;*&gt;</span> y<br /><br /><span class="kw">instance</span> <span class="dt">Applicative</span> [] <span class="kw">where</span><br />  fs <span class="fu">&lt;*&gt;</span> xs <span class="fu">=</span> <span class="fu">concat</span> <span class="fu">$</span> <span class="fu">flip</span> <span class="fu">map</span> fs (<span class="fu">flip</span> <span class="fu">map</span> xs)<br /><br /><span class="kw">class</span> <span class="dt">Applicative</span> m <span class="ot">=&gt;</span> <span class="dt">Monad'</span> m <span class="kw">where</span><br /><span class="ot">  (&gt;&gt;=) </span><span class="ot">::</span> m a <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> m b) <span class="ot">-&gt;</span> m b<br /><br /><span class="ot">liftA2 </span><span class="ot">::</span> <span class="dt">Applicative</span> f <span class="ot">=&gt;</span> (a <span class="ot">-&gt;</span> b <span class="ot">-&gt;</span> c) <span class="ot">-&gt;</span> f a <span class="ot">-&gt;</span> f b <span class="ot">-&gt;</span> f c<br />liftA2 f a b <span class="fu">=</span> f <span class="fu">&lt;$&gt;</span> a <span class="fu">&lt;*&gt;</span> b<br /><br /><span class="ot">(&lt;$&gt;) </span><span class="ot">::</span> (<span class="kw">Functor</span> f) <span class="ot">=&gt;</span> (a <span class="ot">-&gt;</span> b) <span class="ot">-&gt;</span> f a <span class="ot">-&gt;</span> f b<br />(<span class="fu">&lt;$&gt;</span>) <span class="fu">=</span> <span class="fu">fmap</span></code></pre></li>
 </ul>
 <h1 id="rodzaje-kinds">Rodzaje (kinds)</h1>
 <ul>
@@ -188,5 +337,6 @@ APlus (ALitStr &quot;foo&quot;) (ALitInt 42) :: Exp
 ~~~~
 </code></pre>
 <pre class="sourceCode"><code class="sourceCode haskell"></code></pre>
+<pre class="sourceCode"><code class="sourceCode haskell">irr <span class="fu">:</span> (<span class="dt">P0</span> <span class="dt">P1</span> <span class="fu">:</span> &#8224;) <span class="ot">-&gt;</span> <span class="dt">Prf</span> ((<span class="fu">|-</span> <span class="dt">P0</span> &#8660; <span class="fu">|-</span> <span class="dt">P1</span>) <span class="ot">&#8658;</span><br />      <span class="dt">A</span><span class="fu">!</span> (<span class="fu">|-</span> <span class="dt">P0</span>) \p0 <span class="ot">-&gt;</span> <span class="dt">A</span><span class="fu">!</span> (<span class="fu">|-</span> <span class="dt">P1</span>) \p1 <span class="ot">-&gt;</span> <span class="fu">|-</span> <span class="dt">P0</span> <span class="fu">&gt;</span> p0 <span class="dt">&#8773;</span> <span class="fu">|-</span> <span class="dt">P1</span> <span class="fu">&gt;</span> p1)<br /><br />irr &#8869;  &#8869;  _ _ _ <span class="fu">=</span> _<br /><br />irr <span class="dt">TT</span> <span class="dt">TT</span> _ _ _ <span class="fu">=</span> _<br /><br />irr (<span class="dt">P0</span> &#8743; <span class="dt">Q0</span>) (<span class="dt">P1</span> &#8743; <span class="dt">Q1</span>) <span class="dt">PQ01</span> pq0 pq1 <span class="fu">=</span><br />  <span class="kw">let</span> p01 <span class="fu">:</span> <span class="dt">Prf</span> (<span class="fu">|-</span> <span class="dt">P0</span> <span class="fu">&gt;</span> <span class="fu">fst</span> pq0 <span class="dt">&#8773;</span> <span class="fu">|-</span> <span class="dt">P1</span> <span class="fu">&gt;</span> <span class="fu">fst</span> pq1)<br />      p01 <span class="fu">=</span> irr <span class="dt">P0</span> <span class="dt">P1</span> (<span class="fu">fst</span> <span class="dt">PQ01</span>) (<span class="fu">fst</span> pq0) (<span class="fu">fst</span> pq1)<br />  <span class="kw">in</span>  p01 , irr <span class="dt">Q0</span> <span class="dt">Q1</span> (<span class="fu">snd</span> <span class="dt">PQ01</span> (<span class="fu">fst</span> pq0) (<span class="fu">fst</span> pq1) p01) (<span class="fu">snd</span> pq0) (<span class="fu">snd</span> pq1)<br /><br />irr (<span class="dt">A</span><span class="fu">!</span> <span class="dt">S0</span> <span class="dt">P0</span>) (<span class="dt">A</span><span class="fu">!</span> <span class="dt">S1</span> <span class="dt">P1</span>) <span class="dt">SP01</span> f0 f1 <span class="fu">=</span> \s0 s1 s0s1 <span class="ot">-&gt;</span><br />  irr (<span class="dt">P0</span> s0) (<span class="dt">P1</span> s1) (<span class="fu">snd</span> <span class="dt">SP01</span> s1 s0 (sym <span class="dt">S0</span> s0 <span class="dt">S1</span> s1 s0s1)) (f0 s0) (f1 s1)<br /><br />irr        &#8869;  <span class="dt">TT</span>       () _ _<br />irr        &#8869;  (_ &#8743; _)  () _ _<br />irr        &#8869;  (<span class="dt">A</span><span class="fu">!</span> _ _)  () _ _<br />irr       <span class="dt">TT</span>  &#8869;        () _ _<br />irr       <span class="dt">TT</span>  (_ &#8743; _)  () _ _<br />irr       <span class="dt">TT</span>  (<span class="dt">A</span><span class="fu">!</span> _ _)  () _ _<br />irr  (_ &#8743; _)  <span class="dt">TT</span>       () _ _<br />irr  (_ &#8743; _)  &#8869;        () _ _<br />irr  (_ &#8743; _)  (<span class="dt">A</span><span class="fu">!</span> _ _)  () _ _<br />irr  (<span class="dt">A</span><span class="fu">!</span> _ _)  <span class="dt">TT</span>       () _ _<br />irr  (<span class="dt">A</span><span class="fu">!</span> _ _)  &#8869;        () _ _<br />irr  (<span class="dt">A</span><span class="fu">!</span> _ _)  (_ &#8743; _)  () _ _</code></pre>
 </body>
 </html>

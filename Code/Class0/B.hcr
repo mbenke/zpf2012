@@ -1,0 +1,46 @@
+%module main:B
+  %data main:B.B =
+    {main:B.F;
+     main:B.T};
+  %newtype main:B.TZCE main:B.NTCoZCTZCE aabx
+    = aabx -> aabx -> main:B.B;
+  main:B.eq :: %forall aabx . (main:B.TZCE aabx) ->
+                              aabx -> aabx -> main:B.B =
+    \ @ aabx (tplB1::(main:B.TZCE aabx)) ->
+        %cast (tplB1)
+        ((main:B.NTCoZCTZCE aabx));
+  main:B.n :: main:B.B -> main:B.B =
+    \ (dsdbY::main:B.B) ->
+        %case main:B.B dsdbY %of (wildX6::main:B.B)
+          {main:B.F ->
+             main:B.T;
+           main:B.T ->
+             main:B.F};
+  main:B.neq :: %forall aaby . (main:B.TZCE aaby) ->
+                               aaby -> aaby -> main:B.B =
+    \ @ aabO
+      (zddEabP::(main:B.TZCE aabO))
+      (xabzz::aabO)
+      (yabA::aabO) ->
+        %case main:B.B ((%cast (zddEabP)
+                         ((main:B.NTCoZCTZCE aabO)))
+                        xabzz yabA)
+        %of (wildX6::main:B.B)
+          {main:B.F ->
+             main:B.T;
+           main:B.T ->
+             main:B.F};
+  zdceqrc7 :: main:B.B -> main:B.B -> main:B.B =
+    \ (xabB::main:B.B) (yabC::main:B.B) ->
+        %case main:B.B xabB %of (wildX9::main:B.B)
+          {main:B.F ->
+             %case main:B.B yabC %of (wild1X6::main:B.B)
+               {main:B.F ->
+                  main:B.T;
+                main:B.T ->
+                  main:B.F};
+           main:B.T ->
+             yabC};
+  main:B.zdfEB :: (main:B.TZCE main:B.B) =
+    %cast (zdceqrc7)
+    (%sym ((main:B.NTCoZCTZCE main:B.B)));
