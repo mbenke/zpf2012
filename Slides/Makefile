@@ -1,8 +1,9 @@
 MDFILE := $(word 1, $(basename $(wildcard *.md)))
+
 L ?= $(MDFILE)
 PANDOC=~/.cabal/bin/pandoc
 all: $(L).html $(L)-slides.html
-.PHONY: all
+.PHONY: all echo
 
 $(L).html: $(L).md
 	@test -f $<
@@ -11,3 +12,6 @@ $(L).html: $(L).md
 $(L)-slides.html: $(L).md Makefile $(wildcard ./pandoc/slidy/*)
 	@test -f $<
 	$(PANDOC) --data-dir=./pandoc --offline -s -t slidy --mathjax -o $@ $<
+
+echo: 
+	echo $(MDFILE)
