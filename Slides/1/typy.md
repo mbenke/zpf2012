@@ -427,6 +427,24 @@ ghc -c -fext-core B.hs
                          ((CoDE a0)))
                         x y)  
         %of {F -> T; T -> F};
+
+-- tu jest kod implementacji metody eq dla B
+  zdceqrc7 :: B -> B -> B =
+    \ (xabB::B) (yabC::B) ->
+        %case B xabB %of (wildX9::B)
+          {F ->
+             %case B yabC %of (wild1X6::B)
+               {F ->
+                  T;
+                T ->
+                  F};
+           T ->
+             yabC};
+
+-- tu jest slownik metod klasy E dla typu B
+  zdfEB :: (DicE B) =
+    %cast (zdceqrc7)
+    (%sym ((CoDE B)));
 ~~~~
 
 # Podklasy (konteksty klas)
@@ -670,46 +688,10 @@ APlus (ALitStr "foo") (ALitInt 42) :: Exp
 **Ćwiczenie:** napisz ciekawszy interpreter dla wersji Exp i Expr
 
 
-# Koniec
-
-Finis coronat opus.
-
-    ~~~~ {.haskell}
-
-    ~~~~
+# Finis coronat opus.
 
 ~~~~ {.haskell}
 
 ~~~~
 
-
-~~~~ {.haskell}
-irr : (P0 P1 : †) -> Prf ((|- P0 ⇔ |- P1) ⇒
-      A! (|- P0) \p0 -> A! (|- P1) \p1 -> |- P0 > p0 ≅ |- P1 > p1)
-
-irr ⊥  ⊥  _ _ _ = _
-
-irr TT TT _ _ _ = _
-
-irr (P0 ∧ Q0) (P1 ∧ Q1) PQ01 pq0 pq1 =
-  let p01 : Prf (|- P0 > fst pq0 ≅ |- P1 > fst pq1)
-      p01 = irr P0 P1 (fst PQ01) (fst pq0) (fst pq1)
-  in  p01 , irr Q0 Q1 (snd PQ01 (fst pq0) (fst pq1) p01) (snd pq0) (snd pq1)
-
-irr (A! S0 P0) (A! S1 P1) SP01 f0 f1 = \s0 s1 s0s1 ->
-  irr (P0 s0) (P1 s1) (snd SP01 s1 s0 (sym S0 s0 S1 s1 s0s1)) (f0 s0) (f1 s1)
-
-irr        ⊥  TT       () _ _
-irr        ⊥  (_ ∧ _)  () _ _
-irr        ⊥  (A! _ _)  () _ _
-irr       TT  ⊥        () _ _
-irr       TT  (_ ∧ _)  () _ _
-irr       TT  (A! _ _)  () _ _
-irr  (_ ∧ _)  TT       () _ _
-irr  (_ ∧ _)  ⊥        () _ _
-irr  (_ ∧ _)  (A! _ _)  () _ _
-irr  (A! _ _)  TT       () _ _
-irr  (A! _ _)  ⊥        () _ _
-irr  (A! _ _)  (_ ∧ _)  () _ _
-~~~~
 
