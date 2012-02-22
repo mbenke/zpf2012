@@ -50,8 +50,9 @@ vlast :: Vec (Succ n) a -> a
 vlast (x :> VNil) = x
 vlast (x :> xs@(y :> ys)) = vlast xs
 
+{-
 vappend :: (Nat m, Nat n, Add m n s) => Vec m a -> Vec n a -> Vec s a
 vappend xs@VNil ys = ys
 vappend xs ys = undefined
-
+-}
 

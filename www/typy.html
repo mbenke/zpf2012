@@ -260,6 +260,24 @@ to $\Gamma \vdash e :: \forall a.t$
                          ((CoDE a0)))
                         x y)  
         %of {F -&gt; T; T -&gt; F};
+
+-- tu jest kod implementacji metody eq dla B
+  zdceqrc7 :: B -&gt; B -&gt; B =
+    \ (xabB::B) (yabC::B) -&gt;
+        %case B xabB %of (wildX9::B)
+          {F -&gt;
+             %case B yabC %of (wild1X6::B)
+               {F -&gt;
+                  T;
+                T -&gt;
+                  F};
+           T -&gt;
+             yabC};
+
+-- tu jest slownik metod klasy E dla typu B
+  zdfEB :: (DicE B) =
+    %cast (zdceqrc7)
+    (%sym ((CoDE B)));
 </code></pre>
 <h1 id="podklasy-konteksty-klas">Podklasy (konteksty klas)</h1>
 <ul>
@@ -330,13 +348,7 @@ APlus (ALitStr &quot;foo&quot;) (ALitInt 42) :: Exp
     Couldn't match expected type `String' with actual type `Int'...
 </code></pre>
 <p><strong>Ćwiczenie:</strong> napisz ciekawszy interpreter dla wersji Exp i Expr</p>
-<h1 id="koniec">Koniec</h1>
-<p>Finis coronat opus.</p>
-<pre><code>~~~~ {.haskell}
-
-~~~~
-</code></pre>
+<h1 id="finis-coronat-opus.">Finis coronat opus.</h1>
 <pre class="sourceCode"><code class="sourceCode haskell"></code></pre>
-<pre class="sourceCode"><code class="sourceCode haskell">irr <span class="fu">:</span> (<span class="dt">P0</span> <span class="dt">P1</span> <span class="fu">:</span> &#8224;) <span class="ot">-&gt;</span> <span class="dt">Prf</span> ((<span class="fu">|-</span> <span class="dt">P0</span> &#8660; <span class="fu">|-</span> <span class="dt">P1</span>) <span class="ot">&#8658;</span><br />      <span class="dt">A</span><span class="fu">!</span> (<span class="fu">|-</span> <span class="dt">P0</span>) \p0 <span class="ot">-&gt;</span> <span class="dt">A</span><span class="fu">!</span> (<span class="fu">|-</span> <span class="dt">P1</span>) \p1 <span class="ot">-&gt;</span> <span class="fu">|-</span> <span class="dt">P0</span> <span class="fu">&gt;</span> p0 <span class="dt">&#8773;</span> <span class="fu">|-</span> <span class="dt">P1</span> <span class="fu">&gt;</span> p1)<br /><br />irr &#8869;  &#8869;  _ _ _ <span class="fu">=</span> _<br /><br />irr <span class="dt">TT</span> <span class="dt">TT</span> _ _ _ <span class="fu">=</span> _<br /><br />irr (<span class="dt">P0</span> &#8743; <span class="dt">Q0</span>) (<span class="dt">P1</span> &#8743; <span class="dt">Q1</span>) <span class="dt">PQ01</span> pq0 pq1 <span class="fu">=</span><br />  <span class="kw">let</span> p01 <span class="fu">:</span> <span class="dt">Prf</span> (<span class="fu">|-</span> <span class="dt">P0</span> <span class="fu">&gt;</span> <span class="fu">fst</span> pq0 <span class="dt">&#8773;</span> <span class="fu">|-</span> <span class="dt">P1</span> <span class="fu">&gt;</span> <span class="fu">fst</span> pq1)<br />      p01 <span class="fu">=</span> irr <span class="dt">P0</span> <span class="dt">P1</span> (<span class="fu">fst</span> <span class="dt">PQ01</span>) (<span class="fu">fst</span> pq0) (<span class="fu">fst</span> pq1)<br />  <span class="kw">in</span>  p01 , irr <span class="dt">Q0</span> <span class="dt">Q1</span> (<span class="fu">snd</span> <span class="dt">PQ01</span> (<span class="fu">fst</span> pq0) (<span class="fu">fst</span> pq1) p01) (<span class="fu">snd</span> pq0) (<span class="fu">snd</span> pq1)<br /><br />irr (<span class="dt">A</span><span class="fu">!</span> <span class="dt">S0</span> <span class="dt">P0</span>) (<span class="dt">A</span><span class="fu">!</span> <span class="dt">S1</span> <span class="dt">P1</span>) <span class="dt">SP01</span> f0 f1 <span class="fu">=</span> \s0 s1 s0s1 <span class="ot">-&gt;</span><br />  irr (<span class="dt">P0</span> s0) (<span class="dt">P1</span> s1) (<span class="fu">snd</span> <span class="dt">SP01</span> s1 s0 (sym <span class="dt">S0</span> s0 <span class="dt">S1</span> s1 s0s1)) (f0 s0) (f1 s1)<br /><br />irr        &#8869;  <span class="dt">TT</span>       () _ _<br />irr        &#8869;  (_ &#8743; _)  () _ _<br />irr        &#8869;  (<span class="dt">A</span><span class="fu">!</span> _ _)  () _ _<br />irr       <span class="dt">TT</span>  &#8869;        () _ _<br />irr       <span class="dt">TT</span>  (_ &#8743; _)  () _ _<br />irr       <span class="dt">TT</span>  (<span class="dt">A</span><span class="fu">!</span> _ _)  () _ _<br />irr  (_ &#8743; _)  <span class="dt">TT</span>       () _ _<br />irr  (_ &#8743; _)  &#8869;        () _ _<br />irr  (_ &#8743; _)  (<span class="dt">A</span><span class="fu">!</span> _ _)  () _ _<br />irr  (<span class="dt">A</span><span class="fu">!</span> _ _)  <span class="dt">TT</span>       () _ _<br />irr  (<span class="dt">A</span><span class="fu">!</span> _ _)  &#8869;        () _ _<br />irr  (<span class="dt">A</span><span class="fu">!</span> _ _)  (_ &#8743; _)  () _ _</code></pre>
 </body>
 </html>

@@ -17,3 +17,6 @@ instance E B where
 
 neq :: E a => a -> a -> B
 neq x y = n (eq x y)
+
+{-# NOINLINE test #-}
+test  = neq T

@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">
+/*<![CDATA[*/
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode, table.sourceCode pre 
+   { margin: 0; padding: 0; border: 0; vertical-align: baseline; border: none; }
+td.lineNumbers { border-right: 1px solid #AAAAAA; text-align: right; color: #AAAAAA; padding-right: 5px; padding-left: 5px; }
+td.sourceCode { padding-left: 5px; }
+code.sourceCode span.kw { color: #007020; font-weight: bold; } 
+code.sourceCode span.dt { color: #902000; }
+code.sourceCode span.dv { color: #40a070; }
+code.sourceCode span.bn { color: #40a070; }
+code.sourceCode span.fl { color: #40a070; }
+code.sourceCode span.ch { color: #4070a0; }
+code.sourceCode span.st { color: #4070a0; }
+code.sourceCode span.co { color: #60a0b0; font-style: italic; }
+code.sourceCode span.ot { color: #007020; }
+code.sourceCode span.al { color: red; font-weight: bold; }
+code.sourceCode span.fu { color: #06287e; }
+code.sourceCode span.re { }
+code.sourceCode span.er { color: red; font-weight: bold; }
+/*]]>*/
+  </style>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+<body>
+<h1 id="tablice">Tablice</h1>
+<p>Rozwazmy klasę</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">class</span> (<span class="kw">Ord</span> a) <span class="ot">=&gt;</span> <span class="kw">Ix</span> a <span class="kw">where</span><br />    <span class="co">-- | The list of values in the subrange defined by a bounding pair.</span><br /><span class="ot">    range               </span><span class="ot">::</span> (a,a) <span class="ot">-&gt;</span> [a]<br />    <span class="co">-- | The position of a subscript in the subrange.</span><br /><span class="ot">    index               </span><span class="ot">::</span> (a,a) <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Int</span><br />    <span class="co">-- | Like 'index', but without checking that the value is in range.</span><br /><span class="ot">    unsafeIndex         </span><span class="ot">::</span> (a,a) <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Int</span><br />    <span class="co">-- | Returns 'True' the given subscript lies in the range defined</span><br />    <span class="co">-- the bounding pair.</span><br /><span class="ot">    inRange             </span><span class="ot">::</span> (a,a) <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span><br />    <span class="co">-- | The size of the subrange defined by a bounding pair.</span><br /><span class="ot">    rangeSize           </span><span class="ot">::</span> (a,a) <span class="ot">-&gt;</span> <span class="dt">Int</span><br />    <span class="co">-- | Subscript at a given index</span><br /><span class="ot">    atIndex </span><span class="ot">::</span> (a,a) <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> a</code></pre>
+<p>Zdefiniuj instancje dla <code>Int</code>, <code>Integer</code>, <code>Char</code>, <code>()</code> oraz</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">instance</span> (<span class="kw">Ix</span> a, <span class="kw">Ix</span> b) <span class="ot">=&gt;</span> <span class="kw">Ix</span> (a,b)</code></pre>
+<p>Zdefiniuj typ <code>Array</code> przypominający niemodyfikowalne tablice indeksowane elementami typu klasy Ix z operacjami</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="co">-- | listArray (lo,hi) es builds an array indexed from lo to hi with elements es</span><br /><span class="co">-- | O(n log n)</span><br />listArray (<span class="kw">Show</span> i, <span class="kw">Ix</span> i) <span class="ot">=&gt;</span> (i,i) <span class="ot">-&gt;</span> [e] <span class="ot">-&gt;</span> <span class="dt">Array</span> i e<br /><span class="co">-- | The value at the given index in an array. O(log n)</span><br /><span class="ot">(!) </span><span class="ot">::</span> <span class="kw">Ix</span> i <span class="ot">=&gt;</span> <span class="dt">Array</span> i e <span class="ot">-&gt;</span> i <span class="ot">-&gt;</span> e<br /><span class="co">-- | The bounds with which an array was constructed. </span><br /><span class="ot">bounds </span><span class="ot">::</span> <span class="kw">Ix</span> i <span class="ot">=&gt;</span> <span class="dt">Array</span> i e <span class="ot">-&gt;</span> (i, i)<br /><span class="co">-- | The list of elements of an array in index order. </span><br /><span class="ot">elems </span><span class="ot">::</span> <span class="kw">Ix</span> i <span class="ot">=&gt;</span> <span class="dt">Array</span> i e <span class="ot">-&gt;</span> [e]</code></pre>
+<p>NB <code>Data.Array</code> definiuje wbudowane tablice nawet o lepszej złożoności, ale proszę nie oszukiwać.</p>
+<h1 id="typy-jako-j&#281;zyk-programowania">Typy jako język programowania</h1>
+<ul>
+<li><p>Funkcje na typach obliczane w czasie kompilacji</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Zero</span><br /><span class="kw">data</span> <span class="dt">Succ</span> n<br /><br /><span class="kw">type</span> <span class="dt">One</span>   <span class="fu">=</span> <span class="dt">Succ</span> <span class="dt">Zero</span><br /><span class="kw">type</span> <span class="dt">Two</span>   <span class="fu">=</span> <span class="dt">Succ</span> <span class="dt">One</span><br /><span class="kw">type</span> <span class="dt">Three</span> <span class="fu">=</span> <span class="dt">Succ</span> <span class="dt">Two</span><br /><span class="kw">type</span> <span class="dt">Four</span>  <span class="fu">=</span> <span class="dt">Succ</span> <span class="dt">Three</span><br /><br />one   <span class="fu">=</span><span class="ot"> undefined </span><span class="ot">::</span> <span class="dt">One</span><br />two   <span class="fu">=</span><span class="ot"> undefined </span><span class="ot">::</span> <span class="dt">Two</span><br />three <span class="fu">=</span><span class="ot"> undefined </span><span class="ot">::</span> <span class="dt">Three</span><br />four  <span class="fu">=</span><span class="ot"> undefined </span><span class="ot">::</span> <span class="dt">Four</span><br /><br /><span class="kw">class</span> <span class="dt">Add</span> a b c <span class="fu">|</span> a b <span class="ot">-&gt;</span> c <span class="kw">where</span><br /><span class="ot">  add </span><span class="ot">::</span> a <span class="ot">-&gt;</span> b <span class="ot">-&gt;</span> c<br />  add <span class="fu">=</span> <span class="fu">undefined</span><br /><span class="kw">instance</span>              <span class="dt">Add</span>  <span class="dt">Zero</span>    b  b<br /><span class="kw">instance</span> <span class="dt">Add</span> a b c <span class="ot">=&gt;</span> <span class="dt">Add</span> (<span class="dt">Succ</span> a) b (<span class="dt">Succ</span> c)</code></pre>
+<pre><code>*Main&gt; :t add three one
+add three one :: Succ (Succ (Succ (Succ Zero)))
+</code></pre></li>
+<li><p>Ćwiczenie: rozszerzyć o mnożenie i silnię</p></li>
+</ul>
+<h1 id="typy-jako-j&#281;zyk-programowania-2">Typy jako język programowania (2)</h1>
+<p>Wektory przy użyciu klas:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Vec</span><span class="ot"> </span><span class="ot">::</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span><br />  <span class="dt">VNil</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">Vec</span> <span class="dt">Zero</span> a  <br /><span class="ot">  (:&gt;) </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (<span class="dt">Succ</span> n) a<br /><br /><span class="ot">vhead </span><span class="ot">::</span> <span class="dt">Vec</span> (<span class="dt">Succ</span> n) a <span class="ot">-&gt;</span> a<br />vhead (x <span class="fu">:&gt;</span> xs) <span class="fu">=</span> x</code></pre>
+<p><strong>Ćwiczenie:</strong> dopisać <code>vtail</code>, <code>vlast</code></p>
+<h1 id="klasy-wieloparametrowe">Klasy wieloparametrowe</h1>
+<ul>
+<li><p>Czasami potrzebujemy opisać nie tyle pojedynczy typ, co relacje między typami:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-#LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}</span><br /><span class="kw">class</span> <span class="dt">Iso</span> a b <span class="kw">where</span><br /><span class="ot">  iso </span><span class="ot">::</span> a <span class="ot">-&gt;</span> b<br /><span class="ot">  osi </span><span class="ot">::</span> b <span class="ot">-&gt;</span> a<br /><br /><span class="kw">instance</span> <span class="dt">Iso</span> a a <span class="kw">where</span><br />  iso <span class="fu">=</span> <span class="fu">id</span><br />  osi <span class="fu">=</span> <span class="fu">id</span><br /><br /><span class="kw">instance</span> <span class="dt">Iso</span> ((a,b)<span class="ot">-&gt;</span>c) (a<span class="ot">-&gt;</span>b<span class="ot">-&gt;</span>c) <span class="kw">where</span><br />  iso <span class="fu">=</span> <span class="fu">curry</span><br />  osi <span class="fu">=</span> <span class="fu">uncurry</span><br /><br /><span class="kw">instance</span> (<span class="dt">Iso</span> a b) <span class="ot">=&gt;</span> <span class="dt">Iso</span> [a] [b] <span class="kw">where</span><br /> iso <span class="fu">=</span> <span class="fu">map</span> iso<br /> osi <span class="fu">=</span> <span class="fu">map</span> osi</code></pre></li>
+<li><p>Uwaga: w ostatnim przykładzie <code>iso</code> ma inny typ po lewej, inny po prawej</p></li>
+<li><p>Ćwiczenie: napisz jeszcze jakieś instancje klasy <code>Iso</code></p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">instance</span> (<span class="kw">Functor</span> f, <span class="dt">Iso</span> a b) <span class="ot">=&gt;</span> <span class="dt">Iso</span> (f a) (f b) <span class="kw">where</span> <br /><span class="kw">instance</span> <span class="dt">Iso</span> (a<span class="ot">-&gt;</span>b<span class="ot">-&gt;</span>c) (b<span class="ot">-&gt;</span>a<span class="ot">-&gt;</span>c) <span class="kw">where</span></code></pre></li>
+</ul>
+</body>
+</html>

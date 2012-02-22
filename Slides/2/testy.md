@@ -123,6 +123,9 @@ True
 Możemy to próbować zmechanizować:
 
 ~~~~
+prop_permute :: ([a] -> Bool) -> [a] -> Bool
+prop_permute prop = all prop . permutations
+
 *Main> prop_permute prop_idempotent [1,2,3]
 True
 *Main> prop_permute prop_idempotent [1..4]
@@ -155,6 +158,10 @@ Możemy zażyczyć sobie np. 1000:
 *Main Test.QuickCheck> quickCheckWith stdArgs {maxSuccess = 1000}  prop_idempotent
 +++ OK, passed 1000 tests.
 ~~~~
+
+Uwaga: nie możemy losować  wartości polimorficznych, dlatego prop_idempotent monomorficzne.
+
+**Ćwiczenie:** napisz i uruchom kilka testów dla sortowania i kilka testów dla tablic.
 
 # Jak to działa?
 
@@ -505,3 +512,61 @@ instance Show(a->b) where
 propCompAssoc f g h = (f . g) . h === f . (g . h) 
   where types = [f,g,h::Int->Int]
 ~~~~
+
+# Problem z implikacją
+
+~~~~
+prop_insert1 x xs = ordered (insert x xs)
+
+*Main Test.QuickCheck> quickCheck prop_insert1
+*** Failed! Falsifiable (after 6 tests and 7 shrinks):  
+0
+[0,-1]
+~~~~
+
+...oczywiście...
+
+~~~~
+prop_insert2 x xs = ordered xs ==> ordered (insert x xs)
+
+>>> quickCheck prop_insert2
+*** Gave up! Passed only 43 tests.
+~~~~
+
+Prawdopodobieństwo, że losowa lista jest posortowana jest niewielkie :)
+
+~~~~
+prop_insert3 x xs = collect (length xs) $  ordered xs ==> ordered (insert x xs)
+
+>>> quickCheck prop_insert3
+*** Gave up! Passed only 37 tests:
+51% 0
+32% 1
+16% 2
+~~~~
+
+...a i te posortowane są mało przydatne.
+
+# Czasami trzeba napisac własny generator
+
+* Trzeba zdefiniować nowy typ (chyba, że już mamy)
+
+~~~~
+data OrderedInts = OrderedInts [Int]
+
+prop_insert4 :: Int -> OrderedInts -> Bool
+prop_insert4  x (OrderedInts xs) = ordered (insert x xs)
+
+>>> sample (arbitrary:: Gen OrderedInts)
+OrderedInts []
+OrderedInts [0,0]
+OrderedInts [-2,-1,2]
+OrderedInts [-4,-2,0,0,2,4]
+OrderedInts [-7,-6,-6,-5,-2,-1,5]
+OrderedInts [-13,-12,-11,-10,-10,-7,1,1,1,10]
+OrderedInts [-13,-10,-7,-5,-2,3,10,10,13]
+OrderedInts [-19,-4,26]
+OrderedInts [-63,-15,37]
+OrderedInts [-122,-53,-47,-43,-21,-19,29,53]
+~~~~
+
