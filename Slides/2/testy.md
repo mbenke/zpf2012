@@ -282,6 +282,81 @@ instance Arbitrary Int where
   arbitrary     = sized $ \n -> choose (-n,n)
 ~~~~
 
+# Result - wynik testu
+
+Test może dać trojaki wynik:
+
+* Just True - sukces
+* Just False - porażka  (plus kontrprzykład)
+* Nothing - dane nie nadawały się do testu
+
+~~~~ {.haskell}
+data Result = Result { ok :: Maybe Bool, arguments :: [String] }
+
+nothing :: Result
+nothing = Result{ ok = Nothing,  arguments = [] }
+
+newtype Property
+  = Prop (Gen Result)
+~~~~
+
+Własność to generator wyników
+
+# Testable
+
+Aby coś przetestować musimy bmieć dla tego generator wyników:
+
+~~~~ {.haskell}
+class Testable a where
+  property :: a -> Property  
+
+result :: Result -> Property
+result res = Prop (return res)
+
+instance Testable () where
+  property () = result nothing
+
+instance Testable Bool where
+  property b = result (nothing { ok = Just b })
+
+instance Testable Property where
+  property prop = prop
+~~~~
+
+~~~~
+*SimpleCheck1> check True
+OK, passed 100 tests
+*SimpleCheck1> check False
+Falsifiable, after 0 tests:
+~~~~
+
+# Uruchamianie testów
+
+~~~~ {.haskell}
+generate :: Int -> StdGen -> Gen a -> a
+
+tests :: Gen Result -> StdGen -> Int -> Int -> IO () 
+tests gen rnd0 ntest nfail 
+  | ntest == configMaxTest = do done "OK, passed" ntest
+  | nfail == configMaxFail = do done "Arguments exhausted after" ntest
+  | otherwise               =
+         case ok result of
+           Nothing    ->
+             tests gen rnd1 ntest (nfail+1) 
+           Just True  ->
+             tests gen rnd1 (ntest+1) nfail 
+           Just False ->
+             putStr ( "Falsifiable, after "
+                   ++ show ntest
+                   ++ " tests:\n"
+                   ++ unlines (arguments result)
+                    )
+     where
+      result      = generate (configSize ntest) rnd2 gen
+      (rnd1,rnd2) = split rnd0
+~~~~
+
+
 # forAll
 
 ~~~~ {.haskell}
@@ -348,3 +423,85 @@ Falsifiable, after 0 tests:
 ~~~~
 
 
+~~~~
+
+# Generowanie funkcji
+
+Potrafimy testować funkcje, ale czy potrafimy wygenerować losową funkcję?
+
+Zauważmy, że
+
+~~~~ {.haskell}
+Gen(a -> b) ~ (Int -> StdGen -> a -> b) ~ (a -> Gen b)
+~~~~
+
+możemy więc napisać funkcję
+
+~~~~ {.haskell}
+promote :: (a -> Gen b) -> Gen (a -> b)
+promote f = Gen (\n r -> \a -> let Gen m = f a in m n r)
+~~~~
+
+Możemy uzyć `promote` do skonstruowania generatora dla funkcji, jeśli tylko potrafimy skonstruować generator dla wyników zależący jakoś od argumentów.
+
+# Coarbitrary
+
+Możemy to opisac klasą:
+
+~~~~ {.haskell}
+class CoArbitrary where
+  coarbitrary :: a -> Gen b -> Gen b
+~~~~
+
+Na podstawie wartości argumentu, `coarbitrary` tworzy transformator generatorów.
+
+Teraz możemy użyć `Coarbitrary` by stworzyć `Arbitrary` dla funkcji:
+
+~~~~ {.haskell}
+instance (CoArbitrary a, Arbitrary b) => Arbitrary(a->b) where
+  arbitrary = promote $ \a -> coarbitrary a arbitrary
+~~~~
+
+NB w rzeczywistości w QuickChecku `coarbitrary` jest metodą klasy `Arbitrary`.
+
+**Ćwiczenie:** napisz kilka instancji `Arbitrary` dla swoich typów. Możesz zacząć od `coarbitrary = undefined`
+
+# Instancje CoArbitrary
+
+Żeby definiować instancje CoArbitrary
+
+~~~~ {.haskell}
+class CoArbitrary where
+  coarbitrary :: a -> Gen b -> Gen b
+~~~~
+
+musimy umieć pisać transformatory generatorów. Zdefiniujmy funkcję
+
+~~~~ {.haskell}
+variant :: Int -> Gen a -> Gen a
+variant v (Gen m) = Gen (\n r -> m n (rands r !! (v+1)))
+ where
+  rands r0 = r1 : rands r2 where (r1, r2) = split r0
+~~~~
+
+która rozdziela generator liczb losowych na odpowiednią ilość i
+wybiera jeden z nich zależnie od wartości argumentu.
+
+~~~~ {.haskell}
+instance CoArbitrary Bool where
+  coarbitrary False = variant 0
+  coarbitrary True  = variant 1
+~~~~
+
+# Własności funkcji
+
+~~~~ {.haskell}
+infix 4 ===
+(===)  f g x = f x == g x
+
+instance Show(a->b) where
+  show f = "<function>"
+
+propCompAssoc f g h = (f . g) . h === f . (g . h) 
+  where types = [f,g,h::Int->Int]
+~~~~
