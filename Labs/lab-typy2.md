@@ -1,6 +1,8 @@
+# Klasy 
+
 Uzupełnij brakujące definicje:
 
-~~~~
+~~~~  {.haskell}
 class Fluffy f where
   furry :: (a -> b) -> f a -> f b
  
@@ -130,26 +132,28 @@ instance Misty (State s) where
 
 http://blog.tmorris.net/20-intermediate-haskell-exercises/
 
+# Klasy wieloparametrowe
+
 Rozważmy klasę Iso z wykładu:
 
-    ~~~~ {.haskell}
-    {-#LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
-    class Iso a b where
-      iso :: a -> b
-      osi :: b -> a
-      
-    instance Iso a a where
-      iso = id
-      osi = id
+~~~~ {.haskell}
+{-#LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+class Iso a b where
+  iso :: a -> b
+  osi :: b -> a
 
-    instance Iso ((a,b)->c) (a->b->c) where
-      iso = curry
-      osi = uncurry
+instance Iso a a where
+  iso = id
+  osi = id
 
-    instance (Iso a b) => Iso [a] [b] where
-     iso = map iso
-     osi = map osi
-    ~~~~
+instance Iso ((a,b)->c) (a->b->c) where
+  iso = curry
+  osi = uncurry
+
+instance (Iso a b) => Iso [a] [b] where
+ iso = map iso
+ osi = map osi
+~~~~
 
 * Uwaga: w ostatnim przykładzie `iso` ma inny typ po lewej, inny po prawej 
 
@@ -161,3 +165,85 @@ Rozważmy klasę Iso z wykładu:
     instance Iso (a->b->c) (b->a->c) where ...
     instance (Monad m, Iso a b) => Iso (m a) (m b) where ...
     ~~~~
+
+# Klasy konstruktorowe
+
+Na listach mamy 
+
+~~~~  {.haskell}
+foldr :: (a -> b -> b) -> b -> [a] -> b
+~~~~
+
+możemy to uogólnić na inne konstruktory typów:
+
+~~~~  {.haskell}
+import Prelude hiding(foldr)
+import qualified Prelude
+
+class Foldable t where
+   foldr :: (a -> b -> b) -> b -> t a -> b
+~~~~
+
+(tu uproszcozne, patrz Data.Foldable)
+
+**Ćwiczenie:** napisz instancje
+
+~~~~  {.haskell}
+Foldable []	 
+Foldable Maybe	 
+Ix i => Foldable (Array i)
+~~~~
+
+(gdzie Array to tablice z pierwszego labu).
+
+Można także zdefiniowac inne metody Foldable:
+
+~~~~  {.haskell}
+-- | Map each element of the structure to a monoid,
+-- and combine the results.
+foldMap :: (Monoid m) => (a -> m) -> t a -> m
+
+foldl :: (a -> b -> a) -> a -> t b -> a
+~~~~
+
+oraz funkcje
+
+~~~~ {.haskell}
+-- | The concatenation of all the elements of a container of lists.
+concat :: Foldable t => t [a] -> [a]
+concat = fold
+
+-- | Map a function over all the elements of a container and concatenate
+-- the resulting lists.
+concatMap :: Foldable t => (a -> [b]) -> t a -> [b]
+
+-- | 'and' returns the conjunction of a container of Bools.  For the
+-- result to be 'True', the container must be finite; 'False', however,
+-- results from a 'False' value finitely far from the left end.
+and :: Foldable t => t Bool -> Bool
+
+-- | 'or' returns the disjunction of a container of Bools.  For the
+-- result to be 'False', the container must be finite; 'True', however,
+-- results from a 'True' value finitely far from the left end.
+or :: Foldable t => t Bool -> Bool
+
+-- | Determines whether any element of the structure satisfies the predicate.
+any :: Foldable t => (a -> Bool) -> t a -> Bool
+
+-- | Determines whether all elements of the structure satisfy the predicate.
+all :: Foldable t => (a -> Bool) -> t a -> Bool
+
+-- | The 'sum' function computes the sum of the numbers of a structure.
+sum :: (Foldable t, Num a) => t a -> a
+
+-- | The largest element of a non-empty structure.
+maximum :: (Foldable t, Ord a) => t a -> a
+
+-- | Does the element occur in the structure?
+elem :: (Foldable t, Eq a) => a -> t a -> Bool
+
+-- | The 'find' function takes a predicate and a structure and returns
+-- the leftmost element of the structure matching the predicate, or
+-- 'Nothing' if there is no such element.
+find :: Foldable t => (a -> Bool) -> t a -> Maybe a
+~~~~
