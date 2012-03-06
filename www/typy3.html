@@ -1,0 +1,236 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">
+/*<![CDATA[*/
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode, table.sourceCode pre 
+   { margin: 0; padding: 0; border: 0; vertical-align: baseline; border: none; }
+td.lineNumbers { border-right: 1px solid #AAAAAA; text-align: right; color: #AAAAAA; padding-right: 5px; padding-left: 5px; }
+td.sourceCode { padding-left: 5px; }
+code.sourceCode span.kw { color: #007020; font-weight: bold; } 
+code.sourceCode span.dt { color: #902000; }
+code.sourceCode span.dv { color: #40a070; }
+code.sourceCode span.bn { color: #40a070; }
+code.sourceCode span.fl { color: #40a070; }
+code.sourceCode span.ch { color: #4070a0; }
+code.sourceCode span.st { color: #4070a0; }
+code.sourceCode span.co { color: #60a0b0; font-style: italic; }
+code.sourceCode span.ot { color: #007020; }
+code.sourceCode span.al { color: red; font-weight: bold; }
+code.sourceCode span.fu { color: #06287e; }
+code.sourceCode span.re { }
+code.sourceCode span.er { color: red; font-weight: bold; }
+/*]]>*/
+  </style>
+  <script src="https://d3eoax9i5htok0.cloudfront.net/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+</head>
+<body>
+<h1 id="zale&#380;no&#347;ci-funkcyjne">Zależności funkcyjne</h1>
+<p>Czasami w klasach wieloparametrowych, jeden parametr wyznacza inny, np.</p>
+<pre class="sourceCode"><code class="sourceCode haskell"> <span class="kw">class</span> (<span class="kw">Monad</span> m) <span class="ot">=&gt;</span> <span class="dt">MonadState</span> s m <span class="fu">|</span> m <span class="ot">-&gt;</span> s <span class="kw">where</span> <span class="fu">...</span><br /><br /> <span class="kw">class</span> <span class="dt">Collects</span> e ce <span class="fu">|</span> ce <span class="ot">-&gt;</span> e <span class="kw">where</span><br /><span class="ot">      empty  </span><span class="ot">::</span> ce<br /><span class="ot">      insert </span><span class="ot">::</span> e <span class="ot">-&gt;</span> ce <span class="ot">-&gt;</span> ce<br /><span class="ot">      member </span><span class="ot">::</span> e <span class="ot">-&gt;</span> ce <span class="ot">-&gt;</span> <span class="dt">Bool</span></code></pre>
+<p>Problem: <em>Fundeps are very, very tricky.</em> - SPJ</p>
+<p>Więcej: http://research.microsoft.com/en-us/um/people/simonpj/papers/fd-chr/</p>
+<h1 id="refleksja---czemu-nie-klasy-konstruktorowe">Refleksja - czemu nie klasy konstruktorowe?</h1>
+<p>Problem kolekcji możemy rozwiązać np. tak:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">class</span> <span class="dt">Collection</span> c <span class="kw">where</span><br /><span class="ot">  insert </span><span class="ot">::</span> e <span class="ot">-&gt;</span> c e <span class="ot">-&gt;</span> c e<br /><span class="ot">  member </span><span class="ot">::</span> <span class="kw">Eq</span> e <span class="ot">=&gt;</span> e <span class="ot">-&gt;</span> c e<span class="ot">-&gt;</span> <span class="dt">Bool</span><br /><br /><span class="kw">instance</span> <span class="dt">Collection</span> [] <span class="kw">where</span><br />     insert x xs <span class="fu">=</span> x<span class="fu">:</span>xs<br />     member <span class="fu">=</span> <span class="fu">elem</span></code></pre>
+<p>ale nie rozwiązuje to problemu np. z monadą stanu:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"> <span class="kw">class</span> (<span class="kw">Monad</span> m) <span class="ot">=&gt;</span> <span class="dt">MonadState</span> s m <span class="fu">|</span> m <span class="ot">-&gt;</span> s <span class="kw">where</span> <br /><span class="ot">   get </span><span class="ot">::</span> m s<br /><span class="ot">   put </span><span class="ot">::</span> s <span class="ot">-&gt;</span> m ()</code></pre>
+<p>typ stanu nie jest tu parametrem konstruktora m.</p>
+<h1 id="fundeps-are-very-very-tricky">Fundeps are very very tricky</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">class</span> <span class="dt">Mul</span> a b c <span class="fu">|</span> a b <span class="ot">-&gt;</span> c <span class="kw">where</span><br /><span class="ot">  (*) </span><span class="ot">::</span> a <span class="ot">-&gt;</span> b <span class="ot">-&gt;</span> c<br /><br /><span class="kw">newtype</span> <span class="dt">Vec</span> a <span class="fu">=</span> <span class="dt">Vec</span> [a]<br /><span class="kw">instance</span> <span class="kw">Functor</span> <span class="dt">Vec</span> <span class="kw">where</span><br />  <span class="fu">fmap</span> f (<span class="dt">Vec</span> <span class="kw">as</span>) <span class="fu">=</span> <span class="dt">Vec</span> <span class="fu">$</span> <span class="fu">map</span> f <span class="kw">as</span><br /><br /><span class="kw">instance</span> <span class="dt">Mul</span> a b c <span class="ot">=&gt;</span> <span class="dt">Mul</span> a (<span class="dt">Vec</span> b) (<span class="dt">Vec</span> c) <span class="kw">where</span><br />  a <span class="fu">*</span> b <span class="fu">=</span> <span class="fu">fmap</span> (a<span class="fu">*</span>) b<br /><br />f b x y <span class="fu">=</span> <span class="kw">if</span> b <span class="kw">then</span>  x <span class="fu">*</span> (<span class="dt">Vec</span> [y]) <span class="kw">else</span> y</code></pre>
+<p>Jakiego typu jest f? Niech x::a, y::b.</p>
+<p>Wtedy typem wyniku jest b i musimy mieć instancję <code>Mul a (Vec b) b</code></p>
+<p>Z kolei <code>a b -&gt; c</code> implikuje, że <code>b = Vec c</code> dla pewnego c, czyli szukamy instancji</p>
+<pre><code>Mul a (Vec (Vec c)) (Vec c)
+</code></pre>
+<p>zastosowanie reguły <code>Mul a b c =&gt; Mul a (Vec b) (Vec c)</code> doprowadzi nas do <code>Mul a (Vec c) c</code>.</p>
+<p>...i tak w kółko.</p>
+<h1 id="spr&#243;bujmy">Spróbujmy</h1>
+<pre class="sourceCode"><code class="sourceCode haskell">Mul1.hs<span class="fu">:</span><span class="dv">16</span><span class="fu">:</span><span class="dv">21</span><span class="fu">:</span><br />    <span class="dt">Context</span> reduction stack overflow; size <span class="fu">=</span> <span class="dv">21</span><br />    <span class="dt">Use</span> <span class="fu">-</span>fcontext<span class="fu">-</span>stack<span class="fu">=</span><span class="dt">N</span> to increase stack size to <span class="dt">N</span><br /><span class="ot">      co </span><span class="ot">::</span> c18 <span class="fu">~</span> <span class="dt">Vec</span> c19<br />      <span class="fu">$</span><span class="ot">dMul </span><span class="ot">::</span> <span class="dt">Mul</span> a0 c17 c18<br />      <span class="fu">$</span><span class="ot">dMul </span><span class="ot">::</span> <span class="dt">Mul</span> a0 c16 c17<br />      <span class="fu">...</span><br />      <span class="fu">$</span><span class="ot">dMul </span><span class="ot">::</span> <span class="dt">Mul</span> a0 c1 c2<br />      <span class="fu">$</span><span class="ot">dMul </span><span class="ot">::</span> <span class="dt">Mul</span> a0 c c1<br />      <span class="fu">$</span><span class="ot">dMul </span><span class="ot">::</span> <span class="dt">Mul</span> a0 c0 c<br />      <span class="fu">$</span><span class="ot">dMul </span><span class="ot">::</span> <span class="dt">Mul</span> a0 (<span class="dt">Vec</span> c0) c0<br />    <span class="dt">When</span> using functional dependencies to combine<br />      <span class="dt">Mul</span> a (<span class="dt">Vec</span> b) (<span class="dt">Vec</span> c),<br />        arising from the dependency <span class="ot">`a b -&gt; c'</span><br /><span class="ot">        in the instance declaration at 3/Mul1.hs:13:10</span><br /><span class="ot">      Mul a0 (Vec c18) c18,</span><br /><span class="ot">        arising from a use of `</span>mul' at <span class="dv">3</span><span class="fu">/</span>Mul1.hs<span class="fu">:</span><span class="dv">16</span><span class="fu">:</span><span class="dv">21</span><span class="fu">-</span><span class="dv">23</span><br />    <span class="dt">In</span> the expression<span class="fu">:</span> mul x (<span class="dt">Vec</span> [y])<br />    <span class="dt">In</span> the expression<span class="fu">:</span> <span class="kw">if</span> b <span class="kw">then</span> mul x (<span class="dt">Vec</span> [y]) <span class="kw">else</span> y</code></pre>
+<p>(musimy użyć UndecidableInstances, żeby GHC w ogóle spróbowało - ten przykład pokazuje co jest 'Undecidable').</p>
+<h1 id="rodziny-typ&#243;w">Rodziny typów</h1>
+<p>Rodziny to funkcje na typach - jak na pierwszym wykładzie</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# TypeFamilies #-}</span><br /><br /><span class="kw">data</span> <span class="dt">Zero</span> <span class="fu">=</span> <span class="dt">Zero</span><br /><span class="kw">data</span> <span class="dt">Suc</span> n <span class="fu">=</span> <span class="dt">Suc</span> n<br /><br /><span class="kw">type</span> family m <span class="fu">:+</span> n<br /><span class="kw">type</span> <span class="kw">instance</span> <span class="dt">Zero</span> <span class="fu">:+</span> n <span class="fu">=</span> n<br /><span class="kw">type</span> <span class="kw">instance</span> (<span class="dt">Suc</span> m) <span class="fu">:+</span> n <span class="fu">=</span> <span class="dt">Suc</span>(m<span class="fu">:+</span>n)<br /><br /><span class="ot">vhead </span><span class="ot">::</span> <span class="dt">Vec</span> (<span class="dt">Suc</span> n) a <span class="ot">-&gt;</span> a<br /><span class="ot">vappend </span><span class="ot">::</span> <span class="dt">Vec</span> m a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (m<span class="fu">:+</span>n) a</code></pre>
+<p>Trochę dalej powiemy sobie o nich bardziej systematycznie.</p>
+<h1 id="rodziny-typ&#243;w-1">Rodziny typów</h1>
+<p>Inny, może ciekawszy przykład</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE TypeFamilies, FlexibleInstances #-}</span><br /><br /><span class="kw">import</span> <span class="dt">Data.Array</span><br /><br /><span class="kw">type</span> family <span class="dt">ListOfIndex</span> i a<br /><span class="kw">type</span> <span class="kw">instance</span> <span class="dt">ListOfIndex</span> () a <span class="fu">=</span> a<br /><span class="kw">type</span> <span class="kw">instance</span> <span class="dt">ListOfIndex</span> (<span class="dt">Int</span>, i) a <span class="fu">=</span> [<span class="dt">ListOfIndex</span> i a]<br /><br /><span class="kw">class</span> <span class="kw">Ix</span> i <span class="ot">=&gt;</span> <span class="dt">ArrConv</span> i <span class="kw">where</span><br /><span class="ot">  acArgs </span><span class="ot">::</span> <span class="dt">ListOfIndex</span> i a <span class="ot">-&gt;</span> ((i, i), [a])<br /><br /><span class="kw">instance</span> <span class="dt">ArrConv</span> () <span class="kw">where</span><br />  acArgs x <span class="fu">=</span> (((), ()), [x])<br /><br /><span class="kw">instance</span> <span class="dt">ArrConv</span> i <span class="ot">=&gt;</span> <span class="dt">ArrConv</span> (<span class="dt">Int</span>, i) <span class="kw">where</span><br />  acArgs lst <span class="fu">=</span><br />    (((<span class="dv">0</span>, inStart), (<span class="fu">length</span> lst <span class="fu">-</span> <span class="dv">1</span>, inEnd)), args <span class="fu">&gt;&gt;=</span> <span class="fu">snd</span>)<br />    <span class="kw">where</span><br />      args <span class="fu">=</span> <span class="fu">map</span> acArgs lst<br />      (inStart, inEnd) <span class="fu">=</span> <span class="fu">fst</span> (<span class="fu">head</span> args)<br /><br /><span class="ot">arrFromNestedLists </span><span class="ot">::</span> <span class="dt">ArrConv</span> i <span class="ot">=&gt;</span> <span class="dt">ListOfIndex</span> i a <span class="ot">-&gt;</span> <span class="dt">Array</span> i a<br />arrFromNestedLists <span class="fu">=</span> <span class="fu">uncurry</span> listArray <span class="fu">.</span> acArgs</code></pre>
+<p>Źródło:</p>
+<p><a href="http://stackoverflow.com/questions/2043610/haskell-type-families-and-dummy-arguments"><code class="url">http://stackoverflow.com/questions/2043610/haskell-type-families-and-dummy-arguments</code></a></p>
+<h1 id="typy-skojarzone">Typy skojarzone</h1>
+<p>W Prelude mamy</p>
+<pre><code>  (+) :: Num a -&gt; a -&gt; a
+</code></pre>
+<p>Chcemy dodawać liczby różnych typów, np Int i Float</p>
+<pre><code>  instance GNum Int Float where
+    x + y = plusFloat (int2Float x) y  
+
+  class GNum a b where
+    (+) :: a -&gt; b -&gt; ?
+</code></pre>
+<p>Musimy określić typ sumy elementu a i elementu b</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="kw">class</span> <span class="dt">GNum</span> a b <span class="kw">where</span><br /><span class="fu">&gt;</span>   <span class="kw">type</span> <span class="dt">SumTy</span> a<span class="ot"> b </span><span class="ot">::</span> <span class="fu">*</span><br /><span class="fu">&gt;</span><span class="ot">   (+) </span><span class="ot">::</span> a <span class="ot">-&gt;</span> b <span class="ot">-&gt;</span> <span class="dt">SumTy</span> a b<br /><br /><span class="fu">&gt;</span> <span class="kw">instance</span> <span class="dt">GNum</span> <span class="dt">Int</span> <span class="dt">Float</span> <span class="kw">where</span><br /><span class="fu">&gt;</span>   <span class="kw">type</span> <span class="dt">SumTy</span> <span class="dt">Int</span> <span class="dt">Float</span> <span class="fu">=</span> <span class="dt">Float</span><br /><span class="fu">&gt;</span>   x <span class="fu">+</span> y <span class="fu">=</span> plusFloat (int2Float x) y  <br /><br /><span class="fu">&gt;</span> <span class="kw">instance</span> <span class="dt">GNum</span> <span class="dt">Int</span> <span class="dt">Int</span> <span class="kw">where</span><br /><span class="fu">&gt;</span>    <span class="kw">type</span> <span class="dt">SumTy</span> <span class="dt">Int</span> <span class="dt">Int</span> <span class="fu">=</span> <span class="dt">Int</span><br /><span class="fu">&gt;</span>    x <span class="fu">+</span> y <span class="fu">=</span> plusInt x y<br /><br /><span class="fu">*</span><span class="dt">Main</span><span class="fu">&gt;</span> (<span class="dv">1</span><span class="ot">::</span><span class="dt">Int</span>) <span class="fu">+</span> (<span class="dv">1</span><span class="ot">::</span><span class="dt">Int</span>)<br /><span class="dv">2</span><br /><span class="fu">*</span><span class="dt">Main</span><span class="fu">&gt;</span> (<span class="dv">1</span><span class="ot">::</span><span class="dt">Int</span>) <span class="fu">+</span> (<span class="dv">1</span><span class="ot">::</span><span class="dt">Float</span>)<br /><span class="dv">2</span><span class="fu">.</span><span class="dv">0</span></code></pre>
+<h1 id="typy-skojarzone-zamiast-zale&#380;no&#347;ci">Typy skojarzone zamiast zależności</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">class</span> <span class="dt">Collection</span> c <span class="kw">where</span><br />  <span class="kw">type</span> <span class="dt">Elem</span> c<br /><span class="ot">  empty </span><span class="ot">::</span> c<br /><span class="ot">  insert </span><span class="ot">::</span> <span class="dt">Elem</span> c <span class="ot">-&gt;</span> c <span class="ot">-&gt;</span> c<br /><span class="ot">  member </span><span class="ot">::</span> <span class="dt">Elem</span> c <span class="ot">-&gt;</span> c <span class="ot">-&gt;</span> <span class="dt">Bool</span><br /><br /><span class="kw">instance</span> <span class="kw">Eq</span> a <span class="ot">=&gt;</span> <span class="dt">Collection</span> [a] <span class="kw">where</span><br />  <span class="kw">type</span> <span class="dt">Elem</span> [a] <span class="fu">=</span> a<br />  empty <span class="fu">=</span> []<br />  insert  <span class="fu">=</span> (<span class="fu">:</span>)<br />  member <span class="fu">=</span> <span class="fu">elem</span><br /><br /><span class="co">-- ins2 :: Collection c =&gt; Elem c -&gt; Elem c -&gt; c -&gt; c</span><br />ins2 x y c <span class="fu">=</span> insert y (insert x c)<br /><br /><span class="co">-- tu sygnatura niezb&#281;dna</span><br /><span class="ot">noproblem </span><span class="ot">::</span> [<span class="dt">Char</span>]<br />noproblem <span class="fu">=</span> ins2 <span class="ch">'a'</span> <span class="ch">'b'</span> empty<br /><span class="co">-- og&#243;lny typ:</span><br /><span class="co">-- noproblem :: (Collection c, Elem c ~ Char) =&gt; c</span></code></pre>
+<h1 id="generalised-algebraic-data-types-gadt">Generalised Algebraic Data Types (GADT)</h1>
+<p>Rozważmy typowy typ algebraiczny:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Foo</span> a <span class="fu">=</span> <span class="dt">Bar</span> <span class="fu">|</span> <span class="dt">Baz</span> a (<span class="dt">Foo</span> a) </code></pre>
+<p>alternatywnie można go zapisać wypisując typy konstruktorów:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE GADTs #-}</span><br /><span class="kw">data</span> <span class="dt">Foo</span> a <span class="kw">where</span><br />  <span class="dt">Bar</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">Foo</span> a<br />  <span class="dt">Baz</span><span class="ot"> </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">Foo</span> a <span class="ot">-&gt;</span> <span class="dt">Foo</span> a</code></pre>
+<pre><code>*Main&gt; :t Baz () Bar
+Baz () Bar :: Foo ()
+</code></pre>
+<h1 id="generalised-algebraic-data-types-gadt-1">Generalised Algebraic Data Types (GADT)</h1>
+<p>W uogólnionych typach algebraicznych (GADT), końcowe typy konstruktorów mogą być indeksowane różnymi typami:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE GADTs #-}</span><br /><span class="kw">data</span> <span class="dt">Moo</span> a <span class="kw">where</span><br />  <span class="dt">Mud</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">Moo</span> ()<br />  <span class="dt">Mar</span><span class="ot"> </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">Moo</span> a <span class="ot">-&gt;</span> <span class="dt">Moo</span> <span class="dt">Int</span></code></pre>
+<pre><code>*Main&gt; :t Mar () Mud
+Mar () Mud :: Moo Int
+</code></pre>
+<p>Widzieliśmy już przykład przy okazji wektorów:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Vec</span><span class="ot"> </span><span class="ot">::</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span> <span class="kw">where</span><br />  <span class="dt">VNil</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">Vec</span> <span class="dt">Zero</span> a  <br /><span class="ot">  (:&gt;) </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">Vec</span> n a <span class="ot">-&gt;</span> <span class="dt">Vec</span> (<span class="dt">Suc</span> n) a</code></pre>
+<h1 id="generalised-algebraic-data-types-gadt-2">Generalised Algebraic Data Types (GADT)</h1>
+<p>Trochę ciekawszy przykład:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Exp</span> <span class="fu">=</span> <span class="dt">ALitInt</span> <span class="dt">Int</span> <span class="fu">|</span> <span class="dt">ALitStr</span> <span class="dt">String</span> <span class="fu">|</span> <span class="dt">APlus</span> <span class="dt">Exp</span> <span class="dt">Exp</span> <span class="kw">deriving</span>(<span class="kw">Eq</span>,<span class="kw">Show</span>)<br /><span class="kw">data</span> <span class="dt">Expr</span> a <span class="kw">where</span><br />  <span class="dt">ELitInt</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">Int</span><br />  <span class="dt">ELitStr</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Expr</span> <span class="dt">String</span><br />  <span class="dt">EPlus</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">Expr</span> a <span class="ot">-&gt;</span> <span class="dt">Expr</span> a <span class="ot">-&gt;</span> <span class="dt">Expr</span> a<br /><br /><span class="ot">{-# LANGUAGE StandaloneDeriving #-}</span>  <br /><span class="kw">deriving</span> <span class="kw">instance</span> <span class="kw">Show</span> a <span class="ot">=&gt;</span> <span class="kw">Show</span>(<span class="dt">Expr</span> a)  <br /><br /><span class="ot">interpret </span><span class="ot">::</span> <span class="dt">HasPlus</span> a <span class="ot">=&gt;</span> <span class="dt">Expr</span> a <span class="ot">-&gt;</span> a<br />interpret (<span class="dt">ELitInt</span> i) <span class="fu">=</span> i<br />interpret (<span class="dt">ELitStr</span> s) <span class="fu">=</span> s<br />interpret (<span class="dt">EPlus</span> e1 e2) <span class="fu">=</span> plus (interpret e1) (interpret e2)</code></pre>
+<pre><code>*Gadt&gt; interpret $ EPlus (ELitInt 40) (ELitInt 2)
+42
+*Gadt&gt; :t APlus (ALitStr &quot;foo&quot;) (ALitInt 42)
+APlus (ALitStr &quot;foo&quot;) (ALitInt 42) :: Exp
+*Gadt&gt; :t EPlus (ELitStr &quot;foo&quot;) (ELitInt (42::Int))
+    Couldn't match expected type `String' with actual type `Int'...
+</code></pre>
+<p><strong>Ćwiczenie:</strong> napisz ciekawszy interpreter dla wersji Exp i Expr</p>
+<h1 id="systemy-typ&#243;w">Systemy typów</h1>
+<p>Zacznijmy od reguł podstawowych:</p>
+<ul>
+<li>Zmienna</li>
+</ul>
+<p>\[\Gamma(x:t) \vdash x:t \]</p>
+<ul>
+<li>Abstrakcja</li>
+</ul>
+<p>\[{\Gamma(x:t)\vdash e:u}\over {\Gamma\vdash \lambda (x:t).e:t \to u} \]</p>
+<p>[NB w Haskellu pomijamy typ zmiennej pod lambdą, kompilator znajduje właściwe t.]</p>
+<ul>
+<li>Aplikacja</li>
+</ul>
+<p>\[{\Gamma \vdash e_1 : t \to u\quad \Gamma \vdash e_2 : t}\over {\Gamma \vdash e_1 e_2 : u} \]</p>
+<h1 id="typowanie-polimorficzne">Typowanie polimorficzne</h1>
+<ul>
+<li>Generalizacja:</li>
+</ul>
+<p>\[{\Gamma \vdash e : t, a \notin FV( \Gamma )}\over {\Gamma \vdash \Lambda a.e : \forall a.t}\]</p>
+<ul>
+<li>Instancjacja</li>
+</ul>
+<p>\[ {\Gamma \vdash e : \forall a.t}\over {\Gamma \vdash e(s) : t[a:=s]} \]</p>
+<p>W Haskellu pomijamy abstrakcję i aplikację typową, nie piszemy też przeważnie jawnie kwantyfikatora.</p>
+<p>Natomiast w Haskell Core wszystkie te elementy występują, np</p>
+<pre><code>  neq :: %forall a . (DicE a) -&gt; a -&gt; a -&gt; B =
+    \ @ a0  -- a0 jest typem (tzw &quot;duża lambda&quot;, Λa.M)
+      (dicE::(DicE a0))
+      (x::a0)
+      (y::a0) -&gt; ... (CoDE a0) ...
+</code></pre>
+<h1 id="konstruktory-typ&#243;w">Konstruktory typów</h1>
+<p>Aby mówić o operacjach na typach potrzebujemy wyrazić pewne fakty o nich; służą do tego rodzaje, np.</p>
+<p>\[ {n : * \quad a : *}\over{\mathrm{Vec}\;n\;a:*} \]</p>
+<p>w ogólności</p>
+<p>\[ {\Gamma\vdash C : k_1 \to k_2 \quad \Gamma\vdash a : k_1}\over{\Gamma\vdash C a : k_2} \]</p>
+<p>...czyli analogicznie jak &quot;zwykła&quot; aplikacja!</p>
+<p>w Haskellu zasadniczo nie piszemy jawnie rodzajów; w GHC mozna to robić (rozszerzenie KindSignatures)</p>
+<h1 id="konstruktory-typ&#243;w-2">Konstruktory typów (2)</h1>
+<p>Jeżeli dopuścimy tworzenie dowolnych funkcji na typach, dostaniemy system Fω:</p>
+<ul>
+<li>Rodzaj typów (*) jest rodzajem:</li>
+</ul>
+<p>\[ * : \Box \]</p>
+<ul>
+<li>Możemy tworzyć funkcje na rodzajach:</li>
+</ul>
+<p>\[ {k_1,k_2 : \Box}\over {k_1 \to k_2 : \Box} \]</p>
+<ul>
+<li>Abstrakcja rodzajowa:</li>
+</ul>
+<p>\[{\Gamma(a:k_1)\vdash C : k_2 \quad k_1\to k_2:\Box}\over {\Gamma\vdash \lambda a.C:k_1 \to k_2} \]</p>
+<p>czyli znowu podobnie jak &quot;zwykła&quot; abstrakcja. Czy moiglibyśmy to ujednolicić?</p>
+<h1 id="systemy-typ&#243;w-2">Systemy typów (2)</h1>
+<p>Wróćmy reguł podstawowych:</p>
+<ul>
+<li>Zmienna</li>
+</ul>
+<p>\[{\Gamma\vdash t:k\quad k\in\{*,\Box\}}\over{\Gamma(x:t) \vdash x:t} \]</p>
+<ul>
+<li>Abstrakcja</li>
+</ul>
+<p>\[{\Gamma(x:t)\vdash e:u}\over {\Gamma\vdash \lambda (x:t).e:t \to u} \]</p>
+<p>jeżeli u może zależeć od x, możemy uogólnić funkcje do produktów i powyższą regułę ogólniej zapisać jako</p>
+<p>\[{\Gamma(x:t)\vdash e:u}\over {\Gamma\vdash \lambda (x:t).e: (x:t) \to u} \]</p>
+<p>albo</p>
+<p>\[{\Gamma(x:t)\vdash e:u}\over {\Gamma\vdash \lambda (x:t).e:\Pi (x:t). u} \]</p>
+<h1 id="abstrakcja">Abstrakcja</h1>
+<!-- Zauważmy, że mamy trzy rodzaje abstrakcji: -->
+
+<ul>
+<li>termowa</li>
+</ul>
+<p>\[{\Gamma(x:t)\vdash e:u}\over {\Gamma\vdash \lambda (x:t).e:t \to u} \]</p>
+<ul>
+<li>typowa</li>
+</ul>
+<p>\[{\Gamma \vdash e : t, a \notin FV( \Gamma )}\over {\Gamma \vdash \Lambda a.e : \forall a.t}\]</p>
+<p>możemy ją zapisać jako</p>
+<p>\[{\Gamma(a:*) \vdash e : t}\over 
+{\Gamma \vdash \lambda (a:*).e : (a:*) \to t}\]</p>
+<ul>
+<li>rodzajowa</li>
+</ul>
+<p>Wszystkie są szczególnymi przypadkami ogólnej reguły:</p>
+<p>\[{ \Gamma(x:t)\vdash e:u\quad \Gamma\vdash (x:t) \to u:k\quad k\in\{*,\Box\}} 
+\over {\Gamma\vdash \lambda (x:t).e: (x:t) \to u} \]</p>
+<h1 id="aplikacja">Aplikacja</h1>
+<ul>
+<li><p>termowa \[{\Gamma \vdash e_1 : t \to u\quad \Gamma \vdash e_2 : t}\over {\Gamma \vdash e_1 e_2 : u} \]</p></li>
+<li><p>typowa</p></li>
+</ul>
+<p>\[ {\Gamma \vdash e : \forall a.u}\over {\Gamma \vdash e(s) : u[a:=s]} \] czyli inaczej \[ {\Gamma \vdash e : (a:*)\to u\quad \Gamma\vdash s:*}\over {\Gamma \vdash e(s) : u[a:=s]} \]</p>
+<p>w ogólności \[ {\Gamma \vdash e : (a:t)\to u\quad \Gamma\vdash t:k\quad k\in\{*,\Box\}}\over {\Gamma \vdash e(s) : u[a:=s]} \]</p>
+<h1 id="dozwolone-produkty">Dozwolone Produkty</h1>
+<p>Musimy jeszcze ustalić dla jakich rodzajów (k1,k2) dozwolone są produkty:</p>
+<p>\[ {\Gamma \vdash t : k_1\quad\Gamma(x:t)\vdash u : k_2 }
+\over {\Gamma\vdash (x:t)\to u : k_2}\]</p>
+<ul>
+<li><p>(*,*) : funkcje termowe \[ {\Gamma \vdash t : *\quad\Gamma(x:t)\vdash u : * }
+\over {\Gamma\vdash (x:t)\to u : *}\]</p></li>
+<li><p>(☐,*) : forall \[ {\Gamma \vdash k :\Box \quad\Gamma(x:k)\vdash u : * }
+\over {\Gamma\vdash (x:*)\to u : *}\]</p></li>
+</ul>
+<p>NB k może być *, albo innym rodzajem, np.</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE ExplicitForAll, KindSignatures #-}</span><br /><span class="ot">f </span><span class="ot">::</span> forall (<span class="ot">m </span><span class="ot">::</span> <span class="fu">*</span> <span class="ot">-&gt;</span> <span class="fu">*</span>) <span class="fu">.</span> (<span class="kw">Monad</span> m) <span class="ot">=&gt;</span> forall (<span class="ot">a </span><span class="ot">::</span> <span class="fu">*</span>) <span class="fu">.</span> m a <span class="ot">-&gt;</span> m a<br />f <span class="fu">=</span> <span class="fu">...</span></code></pre>
+<h1 id="dozwolone-produkty2">Dozwolone Produkty(2)</h1>
+<p>Musimy jeszcze ustalić dla jakich rodzajów (k1,k2) dozwolone są produkty:</p>
+<p>\[ {\Gamma \vdash t : k_1\quad\Gamma(x:t)\vdash u : k_2 }
+\over {\Gamma\vdash (x:t)\to u : k_2}\]</p>
+<ul>
+<li>(☐,☐) : rodzaje wyższych rzędów, operatory na typach</li>
+</ul>
+<p>\[ {\vdash t : \Box\quad\vdash u : \Box }
+\over {\Gamma\vdash t \to u : \Box}\]</p>
+<p>\[ * : \Box \quad\mbox{(aksjomat)}\]</p>
+<p>Czyli mamy (*,*),(☐,☐),(☐,*) a co z (*,☐) ?</p>
+<p>Nie ma w Haskellu.</p>
+<h1 id="czyli-typy-zale&#380;ne">(*,☐) czyli typy zależne</h1>
+<p>\[ {\Gamma \vdash t : *\quad\Gamma(x:t)\vdash u : \Box }
+\over {\Gamma\vdash (x:t)\to u : \Box}\]</p>
+<p>co to w ogóle znaczy? Przykład (N - liczby naturalne):</p>
+<p>\[ {\Gamma \vdash N : *\quad\Gamma(n:N)\vdash * \to * : \Box }
+\over {\Gamma\vdash (n:N)\to * \to * : \Box}\]</p>
+<p>\[ {\Gamma\vdash \mathrm{Vec} : (n:N)\to * \to *\quad \Gamma\vdash n : N\quad \Gamma\vdash a:*}
+\over {\mathrm{Vec}\; n\; a : *}\] ...czyli <code>Vec n a</code> jest typem.</p>
+<h1 id="finis-coronat-opus.">Finis coronat opus.</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"></code></pre>
+<p>\[{}\over {} \]</p>
+</body>
+</html>
