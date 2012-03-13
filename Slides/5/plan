@@ -1,0 +1,71 @@
+{-
+Zamiast * : □ mamy Set : Set1 : Set2 : ...
+
+* : Set1
+* = Set
+
+□ : Set2
+□ = Set1
+-}
+
+## module A1
+
+### Nat
+
+Load: C-c C-l
+
+id : (A : Set) → 
+id' : {A} → 
+id'' {A} a =
+
+one,two
+
+plus x y = ?
+Give: C-c C-SPC 
+Refine: C-c C-SPC
+
+Normalise: C-c C-n 2 + 2 (uwaga na spacje)
+
+### Logika
+
+exfalso : { A : Set } -> ⊥ -> A
+dneg : A -> ¬(¬ A)
+data _∧_ (A B : Set) : Set
+π1 : {A B : Set } -> A ∧ B → A
+both : {A B C : Set} → (C → A) → (C → B) → (C → (A ∧ B))
+
+ćwiczenie: 
+data _∨_ (A B : Set) : Set where
+sel : (A → C) → (B → C) → (A ∨ B) → C
+
+==
+thmPlusZero : (n : Nat) ->  n + 0 == n   -- ∀ n ∈ N . n + 0 = n
+refl : (n : Nat) → n == n
+subst : (m n : Nat) → (P : Nat → Set) → (pe : m == n) → P m → P n
+sym : (m n : Nat) → (m == n) → (n == m)
+
+uogólnienie: Rel1.agda
+
+forceSym : {A : Set} → (R : Rel A) → Reflexive R → Substitutive R → Symmetric R
+
+jeszcze bardziej uogólnione: Rel2
+
+
+### Wektory
+
+module A2
+
+data Vec (A : Set) : Nat → Set where
+  [] : Vec A zero
+  _∷_ : ∀ {n} → A → Vec A n → Vec A (suc n)
+
+vhead : {A : Set} → {n : Nat} → Vec A (suc n) → A
+
+vtail : {A : Set} → {n : Nat} → Vec A (suc n) → Vec A n 
+
+ćwiczenie:
+
+vht : ∀ {A n} → (v : Vec A (suc n)) → v ≡ vhead v ∷ vtail v
+
+_++_ : ∀ {A m n} → Vec A m → Vec A n → Vec A (m + n)
+
