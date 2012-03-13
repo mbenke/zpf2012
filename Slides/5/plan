@@ -35,8 +35,9 @@ data _∧_ (A B : Set) : Set
 both : {A B C : Set} → (C → A) → (C → B) → (C → (A ∧ B))
 
 ćwiczenie: 
-data _∨_ (A B : Set) : Set where
-sel : (A → C) → (B → C) → (A ∨ B) → C
+data _∨_ (A B : Set) : Set where...
+
+sel : ∀ {A B C : Set} → (A → C) → (B → C) → (A ∨ B) → C
 
 ==
 thmPlusZero : (n : Nat) ->  n + 0 == n   -- ∀ n ∈ N . n + 0 = n

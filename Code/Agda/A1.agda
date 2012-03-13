@@ -43,7 +43,7 @@ data False : Set where -- puste
 data True : Set where
   tt : True
 
-⊥ : Set
+⊥ : Set    -- \bot
 ⊥ = False
 
 exfalso : { A : Set } -> ⊥ -> A
@@ -63,6 +63,15 @@ data _∧_ (A B : Set) : Set where
 
 both : {A B C : Set} → (C → A) → (C → B) → (C → (A ∧ B))
 both f g c = 〈 (f c) , (g c) 〉
+
+-- ćwiczenie: (\or)
+data _∨_ (A B : Set) : Set where
+  inl : A → A ∨ B
+  inr : B → A ∨ B
+
+sel : ∀ {A B C : Set} → (A → C) → (B → C) → (A ∨ B) → C
+sel fl fr x = {!!}
+
 
 infix 1 _==_
 _==_ : Nat -> Nat -> Set
@@ -89,9 +98,12 @@ subst (suc m') (suc n') P pe pm = subst m' n' (λ x → P (suc x))  pe pm
 sym : (m n : Nat) → (m == n) → (n == m)
 sym m n p = subst m n (λ x → x == m) p (refl m)
 
+-- ćwiczenie: przechodniość
+
 thmZero+ : (n : Nat) ->  zero + n == n 
 thmZero+ n  = refl n
 
+-- ćwiczenie: przemienność dodawania
 data Vec (A : Set) : Nat → Set where
   vnil : Vec A zero
   vcons : {n : Nat} → A → Vec A n → Vec A (suc n)
