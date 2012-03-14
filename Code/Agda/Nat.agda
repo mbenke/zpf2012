@@ -26,4 +26,4 @@ thmPlusZero2 (suc y) =
   -- =[ refl ] suc (y + zero) 
   =[ mapId suc (y + 0) y (thmPlusZero2 y) ] suc y 
   end 
-  where open EqReasoning Nat
+  -- where open EqReasoning Nat
