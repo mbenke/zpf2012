@@ -26,6 +26,10 @@ map-id : ∀{A} xs → map {A} id xs ≡ xs
 map-id [] = refl
 map-id {A} (x ∷ xs) = mapId {[ A ]} (_∷_ x) (map id xs) xs (map-id xs)
 
+cong : ∀ {A : Set} {B : Set}
+       (f : A → B) {x y} → x ≡ y → f x ≡ f y
+cong f refl = refl
+
 -- ćwiczenie: 
 map-∘ : ∀ {A B C : Set} (f : B → C) (g : A → B) xs 
   → map (f ∘ g) xs ≡ map f (map g xs)
