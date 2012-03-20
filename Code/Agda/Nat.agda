@@ -20,10 +20,10 @@ thmPlusZero (suc y) = mapId suc (y + zero) y (thmPlusZero y)
 
 open EqReasoning Nat
 thmPlusZero2 : ∀(n : Nat) → n + 0 ≡ n   -- ∀ n ∈ N . n + 0 = n
-thmPlusZero2 zero = refl -- begin zero =[ refl ] 0 end
+thmPlusZero2 zero = begin zero =[ refl ] 0 end
 thmPlusZero2 (suc y) = 
   begin suc y + 0
-  -- =[ refl ] suc (y + zero) 
+  =[ refl ] suc (y + zero) 
   =[ mapId suc (y + 0) y (thmPlusZero2 y) ] suc y 
   end 
-  where open EqReasoning Nat
+  -- where open EqReasoning Nat
