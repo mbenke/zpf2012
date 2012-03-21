@@ -19,7 +19,7 @@ data Request
   = GetChar Chan
   | PutChar Chan Char
   | OpenFile Path Mode
-  -- | CloseChan Chan
+  | CloseChan Chan
   | GetArgs
   deriving(Show)    
           
@@ -48,6 +48,7 @@ runR (GetChar h ) = do
   if eof then return (Chr '\0') else fmap Chr (Sys.hGetChar h)
 runR (OpenFile m p) = fmap Chan (Sys.openFile m p)
 runR (GetArgs) = fmap StrList Environment.getArgs
+runR (CloseChan h) = Sys.hClose h >> return Success
 
 test :: Dialogue
 test rs =  [OpenFile "/dev/null" readMode, GetChar h, PutChar stdout c] where
