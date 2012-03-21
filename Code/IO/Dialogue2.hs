@@ -1,5 +1,6 @@
 module Dialogue2 where
 import qualified System.IO as Sys       
+import qualified System.Environment as Environment
 import System.IO.Error(catchIOError)
 import Debug.Trace
 
@@ -46,6 +47,7 @@ runR (GetChar h ) = do
   eof <- Sys.hIsEOF h
   if eof then return (Chr '\0') else fmap Chr (Sys.hGetChar h)
 runR (OpenFile m p) = fmap Chan (Sys.openFile m p)
+runR GetArgs = fmap StrList Environment.getArgs
 
 test :: Dialogue
 test rs =  [OpenFile "/dev/null" readMode, GetChar h, PutChar stdout c] where
