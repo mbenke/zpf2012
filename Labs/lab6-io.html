@@ -1,0 +1,64 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">
+/*<![CDATA[*/
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode, table.sourceCode pre 
+   { margin: 0; padding: 0; border: 0; vertical-align: baseline; border: none; }
+td.lineNumbers { border-right: 1px solid #AAAAAA; text-align: right; color: #AAAAAA; padding-right: 5px; padding-left: 5px; }
+td.sourceCode { padding-left: 5px; }
+code.sourceCode span.kw { color: #007020; font-weight: bold; } 
+code.sourceCode span.dt { color: #902000; }
+code.sourceCode span.dv { color: #40a070; }
+code.sourceCode span.bn { color: #40a070; }
+code.sourceCode span.fl { color: #40a070; }
+code.sourceCode span.ch { color: #4070a0; }
+code.sourceCode span.st { color: #4070a0; }
+code.sourceCode span.co { color: #60a0b0; font-style: italic; }
+code.sourceCode span.ot { color: #007020; }
+code.sourceCode span.al { color: red; font-weight: bold; }
+code.sourceCode span.fu { color: #06287e; }
+code.sourceCode span.re { }
+code.sourceCode span.er { color: red; font-weight: bold; }
+/*]]>*/
+  </style>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+<body>
+<h1 id="nieczyste-io">Nieczyste I/O</h1>
+<p>Moduł Code/IO/Impure.hs dostarcza funkcji</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">iputchar </span><span class="ot">::</span> <span class="dt">Char</span> <span class="ot">-&gt;</span> ()<br /><span class="ot">igetchar </span><span class="ot">::</span> () <span class="ot">-&gt;</span> <span class="dt">Char</span></code></pre>
+<p>które realizują znakowe I/O na stdin/stdout. Funkcje te są &quot;nieczyste&quot;: ich obliczenie powoduje efekt uboczny. Przy EOF igetchar daje '\0'.</p>
+<p>Używając tych funkcji:</p>
+<ul>
+<li>Napisz program który wypisze ustalony napis (np. &quot;hello&quot; na stdout)</li>
+<li>Napisz program kopiujący stdin na stdout.</li>
+</ul>
+<h1 id="dialogowe-io">Dialogowe I/O</h1>
+<p>Moduł Code/Dialogue2.hs implementuje dialogowe IO. Używając go</p>
+<ul>
+<li>Napisz programy z poprzedniego zadania</li>
+<li>Napisz program kopiujący pliki będące jego argumentami</li>
+</ul>
+<p>Do uruchomienia dialogu służy funkcja <code>runDialogue :: Dialogue a -&gt; IO a</code></p>
+<p>(opcjonalnie) Zaimplementuj dialogowe I/O za pomocą z funkcji z modułu Impure (ewentualnie dopisując dodatkowe &quot;nieczyste&quot; funkcje.</p>
+<h1 id="kontynuacyjne-io">Kontynuacyjne I/O</h1>
+<p>Napisz funkcje realizujące kontynuacyjne I/O przy pomocy dialogowego I/O</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">SuccCont</span> a <span class="fu">=</span> a <span class="ot">-&gt;</span> <span class="dt">Dialogue</span><br /><span class="kw">type</span> <span class="dt">FailCont</span> a <span class="fu">=</span> <span class="fu">IOError</span> <span class="ot">-&gt;</span> <span class="dt">Dialogue</span><br /><span class="kw">type</span> <span class="dt">Cont</span> a <span class="fu">=</span> <span class="dt">FailCont</span> <span class="ot">-&gt;</span> <span class="dt">SuccCont</span> a <span class="ot">-&gt;</span> <span class="dt">Dialogue</span><br /><br /><span class="ot">cgetchar </span><span class="ot">::</span> <span class="dt">Cont</span> <span class="dt">Char</span><br /><span class="ot">cputchar </span><span class="ot">::</span> <span class="dt">Char</span> <span class="ot">-&gt;</span> <span class="dt">Cont</span> ()</code></pre>
+<p>oraz inne potrzebne funkcje, po czym przepisz programy z poprzedniego zadania na wersję kontynuacyjną</p>
+<h1 id="monady">Monady</h1>
+<ol style="list-style-type: decimal">
+<li><p>Używając funkcji z pierwszego zadania stwórz monadę własną monadę I/O: MIO a, z operacjami</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">mgetchar </span><span class="ot">::</span> <span class="dt">MIO</span> <span class="dt">Char</span><br /><span class="ot">mputchar </span><span class="ot">::</span> <span class="dt">Char</span> <span class="ot">-&gt;</span> <span class="dt">MIO</span> ()<br /><span class="ot">runMIO </span><span class="ot">::</span> <span class="dt">MIO</span> () <span class="ot">-&gt;</span> <span class="dt">IO</span> ()</code></pre></li>
+</ol>
+<p>można tu użyć definicji</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">IO</span> a <span class="fu">=</span> <span class="dt">World</span> <span class="ot">-&gt;</span> (a, <span class="dt">World</span>)</code></pre>
+<p>pierwsze ćwiczenie powinno podpowiedzieć, czym będzie <code>World</code></p>
+<ol start="2" style="list-style-type: decimal">
+<li>Napisz monadę DIO implementującą monadyczne IO przy pomocy kontynuacyjnego IO. Przepisz programy z poprzedniego zadania tak, by używały DIO.</li>
+</ol>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">
+/*<![CDATA[*/
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode, table.sourceCode pre 
+   { margin: 0; padding: 0; border: 0; vertical-align: baseline; border: none; }
+td.lineNumbers { border-right: 1px solid #AAAAAA; text-align: right; color: #AAAAAA; padding-right: 5px; padding-left: 5px; }
+td.sourceCode { padding-left: 5px; }
+code.sourceCode span.kw { color: #007020; font-weight: bold; } 
+code.sourceCode span.dt { color: #902000; }
+code.sourceCode span.dv { color: #40a070; }
+code.sourceCode span.bn { color: #40a070; }
+code.sourceCode span.fl { color: #40a070; }
+code.sourceCode span.ch { color: #4070a0; }
+code.sourceCode span.st { color: #4070a0; }
+code.sourceCode span.co { color: #60a0b0; font-style: italic; }
+code.sourceCode span.ot { color: #007020; }
+code.sourceCode span.al { color: red; font-weight: bold; }
+code.sourceCode span.fu { color: #06287e; }
+code.sourceCode span.re { }
+code.sourceCode span.er { color: red; font-weight: bold; }
+/*]]>*/
+  </style>
+</head>
+<body>
+<h1 id="monada-stanu">Monada stanu</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">S</span> <span class="fu">=</span> <span class="dt">Int</span>  <span class="co">-- przyk&#322;adowo</span><br /><span class="kw">type</span> <span class="dt">SM</span> a <span class="fu">=</span> <span class="dt">S</span> <span class="ot">-&gt;</span> (a,<span class="dt">S</span>)<br /><br /><span class="co">-- Nie mo&#380;na napisa&#263; instance Functor SM ...</span><br /><span class="ot">smap </span><span class="ot">::</span> (a<span class="ot">-&gt;</span>b) <span class="ot">-&gt;</span> (<span class="dt">SM</span> a <span class="ot">-&gt;</span> <span class="dt">SM</span> b)<br />smap f t <span class="fu">=</span> first f <span class="fu">.</span> t <span class="co">-- \s -&gt; ffirst f (t s)</span><br /><br /><span class="ot">spure </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">SM</span> a<br />spure a s <span class="fu">=</span> (a, s)<br /><span class="co">-- spure = (,)</span><br /><br /><span class="ot">sbind </span><span class="ot">::</span> <span class="dt">SM</span> a <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">SM</span> b) <span class="ot">-&gt;</span> <span class="dt">SM</span> b<br />sbind f k <span class="fu">=</span> \s <span class="ot">-&gt;</span> <span class="kw">let</span> (a,s') <span class="fu">=</span> f s <span class="kw">in</span> k a s'<br /><br /><span class="ot">sjoin </span><span class="ot">::</span> <span class="dt">SM</span> (<span class="dt">SM</span> a) <span class="ot">-&gt;</span> <span class="dt">SM</span> a<br /><span class="co">-- sjoin :: (S -&gt; (S -&gt; (a,S),S)) -&gt; S -&gt; (a,S)</span><br />sjoin mma <span class="fu">=</span> \s <span class="ot">-&gt;</span> <span class="kw">let</span> (ma,s') <span class="fu">=</span> mma s <span class="kw">in</span> ma s'<br /><br /><br /><span class="co">-- uncurry ($) :: (b -&gt; c, b) -&gt; c</span><br /><span class="ot">sjoin' </span><span class="ot">::</span> <span class="dt">SM</span> (<span class="dt">SM</span> a) <span class="ot">-&gt;</span> <span class="dt">SM</span> a<br /><span class="co">-- sjoin' mma = \s -&gt; let (ma, s') = mma s in ma s'</span><br /><span class="co">-- sjoin' mma = \s -&gt; uncurry ($) (mma s)</span><br />sjoin' mma <span class="fu">=</span> <span class="fu">uncurry</span> (<span class="fu">$</span>) <span class="fu">.</span> mma</code></pre>
+<h1 id="monada-state">Monada State</h1>
+<p>Jesli chcemy zrobić porządną instancję <code>Monad</code> musimy opakować to wszystko w newtype:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">newtype</span> <span class="dt">State</span> s a <span class="fu">=</span> <span class="dt">State</span> {<span class="ot"> runState </span><span class="ot">::</span> s <span class="ot">-&gt;</span> (a, s) }<br /><br /><span class="kw">instance</span> <span class="kw">Functor</span> (<span class="dt">State</span> s) <span class="kw">where</span><br />    <span class="fu">fmap</span> f m <span class="fu">=</span> <span class="dt">State</span> <span class="fu">$</span> \s <span class="ot">-&gt;</span> <span class="kw">let</span><br />        (a, s') <span class="fu">=</span> runState m s<br />        <span class="kw">in</span> (f a, s')<br /><br /><span class="kw">instance</span> <span class="kw">Monad</span> (<span class="dt">State</span> s) <span class="kw">where</span><br />    <span class="fu">return</span> a <span class="fu">=</span> <span class="dt">State</span> <span class="fu">$</span> \s <span class="ot">-&gt;</span> (a, s)<br />    m <span class="fu">&gt;&gt;=</span> k  <span class="fu">=</span> <span class="dt">State</span> <span class="fu">$</span> \s <span class="ot">-&gt;</span> <span class="kw">let</span><br />        (a, s') <span class="fu">=</span> runState m s<br />        <span class="kw">in</span> runState (k a) s'</code></pre>
+<h1 id="stan-a-lenistwo">Stan a lenistwo</h1>
+<p>Możemy zapisać instancje Functor i Monad trochę inaczej:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="kw">Functor</span> (<span class="dt">State</span> s) <span class="kw">where</span><br />    <span class="fu">fmap</span> f m <span class="fu">=</span> <span class="dt">State</span> <span class="fu">$</span> \s <span class="ot">-&gt;</span> <span class="kw">case</span> runState m s <span class="kw">of</span><br />                                 (a, s') <span class="ot">-&gt;</span> (f a, s')<br /><span class="kw">instance</span> <span class="kw">Monad</span> (<span class="dt">State</span> s) <span class="kw">where</span><br />    <span class="fu">return</span> a <span class="fu">=</span> <span class="dt">State</span> <span class="fu">$</span> \s <span class="ot">-&gt;</span> (a, s)<br />    m <span class="fu">&gt;&gt;=</span> k  <span class="fu">=</span> <span class="dt">State</span> <span class="fu">$</span> \s <span class="ot">-&gt;</span> <span class="kw">case</span> runState m s <span class="kw">of</span><br />                                 (a, s') <span class="ot">-&gt;</span> runState (k a) s'</code></pre>
+<p>Jaka jest różnica?</p>
+<h1 id="control.monad.state.lazy">Control.Monad.State.Lazy</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">import</span> <span class="dt">Debug.Trace</span><br /><br />f <span class="fu">=</span> \s <span class="ot">-&gt;</span><br />        <span class="kw">let</span> (x, s')  <span class="fu">=</span> doSomething s<br />            (y, s'') <span class="fu">=</span> doSomethingElse s'<br />        <span class="kw">in</span> (<span class="dv">3</span>, s'')<br /><br />doSomething s <span class="fu">=</span> trace <span class="st">&quot;doSomething&quot;</span> <span class="fu">$</span> (<span class="dv">0</span>, s)<br />doSomethingElse s <span class="fu">=</span> trace <span class="st">&quot;doSomethingElse&quot;</span> <span class="fu">$</span> (<span class="dv">3</span>, s)<br /><br />main <span class="fu">=</span> <span class="fu">print</span> (f <span class="dv">2</span>)</code></pre>
+<pre><code>$ runhaskell LazyTest.hs
+doSomethingElse
+doSomething
+(3,2)
+</code></pre>
+<h1 id="control.monad.state.strict">Control.Monad.State.Strict</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">import</span> <span class="dt">Debug.Trace</span><br /><br />f <span class="fu">=</span> \s <span class="ot">-&gt;</span><br />        <span class="kw">let</span> (x, s')  <span class="fu">=</span> doSomething s<br />            (y, s'') <span class="fu">=</span> doSomethingElse s'<br />        <span class="kw">in</span> (<span class="dv">3</span>, s'')<br /><br />doSomething s <span class="fu">=</span> trace <span class="st">&quot;doSomething&quot;</span> <span class="fu">$</span> (<span class="dv">0</span>, s)<br />doSomethingElse s <span class="fu">=</span> trace <span class="st">&quot;doSomethingElse&quot;</span> <span class="fu">$</span> (<span class="dv">3</span>, s)<br /><br />main <span class="fu">=</span> <span class="fu">print</span> (f <span class="dv">2</span>)</code></pre>
+<pre><code>ben@sowa:~/Zajecia/Zpf/Slides/7$ runhaskell StrictTest.hs
+doSomething
+doSomethingElse
+(3,2)
+</code></pre>
+<p>Zwykle kolejność obliczeń jest nam obojętna, ale np. w wypadku IO...</p>
+<h1 id="continuation-passing-style-cps">Continuation Passing Style (CPS)</h1>
+<p>Z kontynuacjami zetknęliśmy się już przy okazji I/O:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="fu">readFile</span><span class="ot"> </span><span class="ot">::</span> <span class="dt">Name</span> <span class="ot">-&gt;</span> <span class="dt">FailCont</span> <span class="ot">-&gt;</span> <span class="dt">StrCont</span> <span class="ot">-&gt;</span> <span class="dt">Dialogue</span></code></pre>
+<p>Dowolną funkcję można przerobic na styl kontynuacyjny, np.</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">add </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span><br />add x y <span class="fu">=</span> x <span class="fu">+</span> y<br /><br /><span class="ot">add_cps </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> (<span class="dt">Int</span> <span class="ot">-&gt;</span> r ) <span class="ot">-&gt;</span> r<br />add_cps x y k <span class="fu">=</span>  k (x<span class="fu">+</span>y)<br /><br /><span class="kw">type</span> <span class="dt">Cont</span> r a <span class="fu">=</span> (a <span class="ot">-&gt;</span> r) <span class="ot">-&gt;</span> r<br /><span class="ot">add_cps' </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Cont</span> r <span class="dt">Int</span><br />add_cps' <span class="fu">=</span> add_cps</code></pre>
+<pre><code>*Main&gt; add_cps 2 2 id
+4
+*Main&gt; add_cps 2 2 show
+&quot;4&quot;
+</code></pre>
+<h1 id="cps-2">CPS (2)</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">square_cps </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> (<span class="dt">Int</span> <span class="ot">-&gt;</span> r) <span class="ot">-&gt;</span> r<br />square_cps x k <span class="fu">=</span> k (square x)<br /><br /><span class="ot">pythagoras_cps </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> (<span class="dt">Int</span> <span class="ot">-&gt;</span> r) <span class="ot">-&gt;</span> r<br />pythagoras_cps x y k <span class="fu">=</span><br /> square_cps x <span class="fu">$</span> \x_squared <span class="ot">-&gt;</span><br /> square_cps y <span class="fu">$</span> \y_squared <span class="ot">-&gt;</span><br /> add_cps x_squared y_squared <span class="fu">$</span> \sum_of_squares <span class="ot">-&gt;</span><br /> k sum_of_squares</code></pre>
+<pre><code>*Main&gt; pythagoras_cps 3 4 id
+25
+</code></pre>
+<h1 id="monada-kontynuacji">Monada kontynuacji</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">Cont</span> r a <span class="fu">=</span> (a <span class="ot">-&gt;</span> r) <span class="ot">-&gt;</span> r<br /><span class="co">-- Zwi&#261;zek z logik&#261;:  Cont a &#8764; (a &#8594; &#8869;) &#8594; &#8869; = &#172;&#172;a</span><br /><br /><span class="ot">contra </span><span class="ot">::</span> (a<span class="ot">-&gt;</span>b) <span class="ot">-&gt;</span> (b<span class="ot">-&gt;</span>r) <span class="ot">-&gt;</span> (a<span class="ot">-&gt;</span>r)<br />contra f g <span class="fu">=</span> g <span class="fu">.</span> f<br /><br /><span class="ot">cmap </span><span class="ot">::</span> (a <span class="ot">-&gt;</span> b) <span class="ot">-&gt;</span> <span class="dt">Cont</span> r a <span class="ot">-&gt;</span> <span class="dt">Cont</span> r b<br /><span class="co">--   :: (a -&gt; b) -&gt; ((a -&gt; r) -&gt; r) -&gt;  (b -&gt; r) -&gt; r</span><br />cmap f m <span class="fu">=</span> \c <span class="ot">-&gt;</span> m <span class="fu">$</span> c <span class="fu">.</span> f <span class="co">-- \c -&gt; m (contra f c)</span><br /><br /><span class="ot">cpure </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">Cont</span> r a<br />cpure <span class="fu">=</span> <span class="fu">flip</span> (<span class="fu">$</span>) <span class="co">-- \a c -&gt; c a</span><br /><br /><span class="ot">cbind </span><span class="ot">::</span> <span class="dt">Cont</span> r a <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">Cont</span> r b) <span class="ot">-&gt;</span> <span class="dt">Cont</span> r b<br /><span class="co">-- ((a-&gt;r)-&gt;r)) -&gt; (a -&gt; (b-&gt;r)-&gt;r)</span><br />cbind m k <span class="fu">=</span> \c <span class="ot">-&gt;</span> m (\a <span class="ot">-&gt;</span> k a c)</code></pre>
+<p>Jak zwykle w bibliotece jest to zapakowane w newtype, ale mamy funkcje</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">cont </span><span class="ot">::</span> ((a<span class="ot">-&gt;</span>r)<span class="ot">-&gt;</span>r) <span class="ot">-&gt;</span> <span class="dt">Cont</span> r a<br /><span class="ot">runCont </span><span class="ot">::</span> <span class="dt">Cont</span> r a <span class="ot">-&gt;</span> (a<span class="ot">-&gt;</span>r)<span class="ot">-&gt;</span>r</code></pre>
+<h1 id="monada-kontynuacji-2">Monada kontynuacji (2)</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">import</span> <span class="dt">Control.Monad.Cont</span><br /><br /><span class="ot">add_cont </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Cont</span> r <span class="dt">Int</span><br />add_cont x y <span class="fu">=</span> <span class="fu">return</span> (x<span class="fu">+</span>y)<br /><br /><span class="ot">square_cont </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Cont</span> r <span class="dt">Int</span><br />square_cont x <span class="fu">=</span> <span class="fu">return</span> (x<span class="fu">*</span>x)<br /><br /><span class="ot">pythagoras_cont </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Cont</span> r <span class="dt">Int</span><br />pythagoras_cont x y <span class="fu">=</span><br />    <span class="kw">do</span> x_squared <span class="ot">&lt;-</span> square_cont x<br />       y_squared <span class="ot">&lt;-</span> square_cont y<br />       sum_of_squares <span class="ot">&lt;-</span> add_cont x_squared y_squared<br />       <span class="fu">return</span> sum_of_squares</code></pre>
+<pre><code>*Main&gt; runCont (pythagoras_cont 3 4) id
+25
+</code></pre>
+<h1 id="kontynuacje">Kontynuacje</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">import</span> <span class="dt">Control.Monad.Cont</span><br /><br /><span class="ot">ex1 </span><span class="ot">::</span> <span class="dt">Cont</span> r <span class="dt">Int</span><br />ex1 <span class="fu">=</span> <span class="kw">do</span><br />  a <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">1</span><br />  b <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">10</span><br />  <span class="fu">return</span> (a<span class="fu">+</span>b)<br /><br /><span class="co">-- test :: (forall r. (Show r) =&gt; Cont r Int) -&gt; String </span><br />test ex <span class="fu">=</span> runCont ex <span class="fu">show</span></code></pre>
+<pre><code>&gt; test ex1
+&quot;11&quot;
+</code></pre>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="co">-- cont :: ((a-&gt;r)-&gt;r) -&gt; Cont r a</span><br /><span class="ot">ex2 </span><span class="ot">::</span> <span class="dt">Cont</span> r <span class="dt">Int</span><br />ex2 <span class="fu">=</span> <span class="kw">do</span><br />  a <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">1</span><br />  b <span class="ot">&lt;-</span> cont (\c <span class="ot">-&gt;</span> c <span class="dv">10</span>)<br />  <span class="fu">return</span> (a<span class="fu">+</span>b)</code></pre>
+<pre><code>&gt; test ex2
+&quot;11&quot;
+</code></pre>
+<h1 id="brak-wyniku---wyj&#261;tki">Brak wyniku - wyjątki</h1>
+<pre class="sourceCode"><code class="sourceCode haskell">ex3 <span class="fu">=</span> <span class="kw">do</span><br />   a <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">1</span><br />   b <span class="ot">&lt;-</span> cont (\c <span class="ot">-&gt;</span> <span class="st">&quot;escape&quot;</span>)<br />   <span class="fu">return</span> <span class="fu">$</span> a<span class="fu">+</span>b</code></pre>
+<pre><code>&gt; test ex3
+&quot;escape&quot;
+</code></pre>
+<p>...czyli mamy wyjątki</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">escape </span><span class="ot">::</span> r <span class="ot">-&gt;</span> <span class="dt">Cont</span> r a<br />escape r <span class="fu">=</span> cont (<span class="fu">const</span> r)</code></pre>
+<pre class="sourceCode"><code class="sourceCode haskell">ex3e <span class="fu">=</span> <span class="kw">do</span><br />   a <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">1</span><br />   b <span class="ot">&lt;-</span> escape <span class="st">&quot;escape&quot;</span><br />   <span class="fu">return</span> <span class="fu">$</span> a<span class="fu">+</span>b</code></pre>
+<h1 id="wiele-wynik&#243;w">Wiele wyników</h1>
+<pre class="sourceCode"><code class="sourceCode haskell">ex4 <span class="fu">=</span> <span class="kw">do</span><br />   a <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">1</span><br />   b <span class="ot">&lt;-</span> cont (\c <span class="ot">-&gt;</span> c <span class="dv">10</span> <span class="fu">++</span> c <span class="dv">20</span>)<br />   <span class="fu">return</span> <span class="fu">$</span> a<span class="fu">+</span>b</code></pre>
+<pre><code>&gt; test ex4
+&quot;1121&quot;
+</code></pre>
+<p>Hmm, to prawie jak monada list:</p>
+<pre class="sourceCode"><code class="sourceCode haskell">test5 <span class="fu">=</span> <span class="kw">do</span> <br />  a <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">1</span><br />  b <span class="ot">&lt;-</span> [<span class="dv">10</span>, <span class="dv">20</span>]<br />  <span class="fu">return</span> <span class="fu">$</span> a<span class="fu">+</span>b   </code></pre>
+<pre><code>&gt; test5
+[11,21]
+</code></pre>
+<h1 id="wiele-wynik&#243;w-2">Wiele wyników (2)</h1>
+<pre class="sourceCode"><code class="sourceCode haskell">ex6 <span class="fu">=</span> <span class="kw">do</span><br />  a <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">1</span><br />  b <span class="ot">&lt;-</span> <span class="dt">Cont</span> (\c <span class="ot">-&gt;</span> c <span class="dv">10</span> <span class="fu">++</span> c <span class="dv">20</span>)<br />  <span class="fu">return</span> <span class="fu">$</span> a<span class="fu">+</span>b<br /><br />test6 <span class="fu">=</span> runCont ex6 (\x <span class="ot">-&gt;</span> [x])</code></pre>
+<pre><code>&gt; test6
+[11,21]
+</code></pre>
+<p>Albo inaczej:</p>
+<pre class="sourceCode"><code class="sourceCode haskell">ex7 <span class="fu">=</span> <span class="kw">do</span><br />   a <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">1</span><br />   b <span class="ot">&lt;-</span> cont (\c <span class="ot">-&gt;</span> <span class="fu">concat</span> [c <span class="dv">10</span>, c <span class="dv">20</span>])<br />   <span class="fu">return</span> <span class="fu">$</span> a<span class="fu">+</span>b<br /><br />test7 <span class="fu">=</span> runCont ex7 (\x <span class="ot">-&gt;</span> [x])<br /><br />ex8 <span class="fu">=</span> <span class="kw">do</span><br />  a <span class="ot">&lt;-</span> <span class="fu">return</span> <span class="dv">1</span><br />  b <span class="ot">&lt;-</span> cont (\c <span class="ot">-&gt;</span> [<span class="dv">10</span>,<span class="dv">20</span>] <span class="fu">&gt;&gt;=</span> c)<br />  <span class="fu">return</span> <span class="fu">$</span> a<span class="fu">+</span>b<br /><br />test8 <span class="fu">=</span> runCont ex8 <span class="fu">return</span></code></pre>
+<h1 id="&#263;wiczenie---kontynuacje-a-stan">Ćwiczenie - kontynuacje a stan</h1>
+<pre><code>Stan:
+ s -&gt; (a,s)
+
+CPS:   s -&gt; ((a,s) -&gt; r) -&gt; r
+curry: s -&gt; (a -&gt; s -&gt; r) -&gt; r
+flip:  (a -&gt; s -&gt; r) -&gt; s -&gt; r
+</code></pre>
+<p>Zdefiniuj</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">CS</span> s a r <span class="fu">=</span> (a <span class="ot">-&gt;</span> s <span class="ot">-&gt;</span> r) <span class="ot">-&gt;</span> s <span class="ot">-&gt;</span> r<br /><span class="co">-- Odpowiednik Functor</span><br /><span class="ot">csmap </span><span class="ot">::</span> (a<span class="ot">-&gt;</span>b) <span class="ot">-&gt;</span> <span class="dt">CS</span> s a r <span class="ot">-&gt;</span> <span class="dt">CS</span> s b r<br /><br /><span class="co">-- Odpowiednik Monad</span><br /><span class="ot">cspure </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">CS</span> s a r<br /><span class="ot">csbind </span><span class="ot">::</span> <span class="dt">CS</span> s a r <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">CS</span> s b r) <span class="ot">-&gt;</span> <span class="dt">CS</span> s b r</code></pre>
+<p>i sprawdź, że działa:</p>
+<pre><code>&gt;&gt;&gt; foo (\a s -&gt; show a) 17
+&quot;42&quot;
+</code></pre>
+<h1 id="&#263;wiczenie---kontynuacje-a-stan-2">Ćwiczenie - kontynuacje a stan (2)</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="co">-- Odpowiednik MonadState</span><br /><span class="co">-- get :: MonadState s m =&gt; m s</span><br /><span class="ot">csget </span><span class="ot">::</span> <span class="dt">CS</span> s s r<br /><br /><span class="co">-- put :: MonadState s m =&gt; s -&gt; m ()</span><br /><span class="ot">csput </span><span class="ot">::</span> s <span class="ot">-&gt;</span> <span class="dt">CS</span> s () r<br /><br /><span class="ot">csmodify </span><span class="ot">::</span> (s<span class="ot">-&gt;</span>s) <span class="ot">-&gt;</span> <span class="dt">CS</span> s () r<br />csmodify t <span class="fu">=</span> csget <span class="ot">`csbind`</span> (\s <span class="ot">-&gt;</span> csput (t s))<br /><br /><span class="ot">cstick </span><span class="ot">::</span> <span class="dt">CS</span> <span class="dt">Int</span> () r<br />cstick <span class="fu">=</span> csmodify (<span class="fu">+</span><span class="dv">1</span>)<br /><br /><span class="ot">bar </span><span class="ot">::</span> <span class="dt">CS</span> <span class="dt">Int</span> <span class="dt">Int</span> r<br />bar <span class="fu">=</span> csput <span class="dv">40</span> <span class="ot">`csthen`</span> cstick <span class="ot">`csthen`</span> cstick <span class="ot">`csthen`</span> csget</code></pre>
+<p>...i sprawdź, że działa:</p>
+<pre><code>*Main&gt; bar const 0
+42
+</code></pre>
+<p>Uwaga:</p>
+<ul>
+<li>nie importuj Control.Monad.State</li>
+<li>nie zaglądaj do jego źródeł</li>
+</ul>
+<h1 id="&#263;wiczenie---kontynuacje-a-stan-3">Ćwiczenie - kontynuacje a stan (3)</h1>
+<p>Zdefiniuj monadę stanu przy pomocy Cont:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE TypeSynonymInstances,FlexibleInstances, MultiParamTypeClasses #-}</span><br /><span class="kw">import</span> <span class="dt">Control.Monad.Cont</span><br /><span class="co">-- Uwaga: nie importujemy Control.Monad.State</span><br /><span class="kw">class</span> (<span class="kw">Monad</span> m) <span class="ot">=&gt;</span> <span class="dt">MonadState</span> s m <span class="fu">|</span> m <span class="ot">-&gt;</span> s <span class="kw">where</span><br /><span class="ot">    get </span><span class="ot">::</span> m s<br /><span class="ot">    put </span><span class="ot">::</span> s <span class="ot">-&gt;</span> m ()<br /><span class="ot">modify </span><span class="ot">::</span> (<span class="dt">MonadState</span> s m) <span class="ot">=&gt;</span> (s <span class="ot">-&gt;</span> s) <span class="ot">-&gt;</span> m ()<br />modify f <span class="fu">=</span> <span class="kw">do</span> { s <span class="ot">&lt;-</span> get; put (f s) }<br /><br /><span class="co">-- w miejsce X wstaw wyra&#380;enie u&#380;ywaj&#261;ce Cont, s, r</span><br /><span class="kw">type</span> <span class="dt">CSM</span> s r a <span class="fu">=</span> <span class="dt">X</span> a <br /><br /><span class="kw">instance</span> <span class="dt">MonadState</span> s <span class="dt">X</span> <span class="kw">where</span><br /><span class="fu">...</span><br /><span class="co">-- Wskaz&#243;wka: cont :: ((a-&gt;s-&gt;r)-&gt;s -&gt; r) -&gt; Cont (s-&gt;r) a</span><br /><br /><span class="ot">tick </span><span class="ot">::</span> <span class="dt">CSM</span> <span class="dt">Int</span> r <span class="dt">Int</span><br />tick <span class="fu">=</span> modify (<span class="fu">+</span><span class="dv">1</span>)<br /><br /><span class="ot">baz </span><span class="ot">::</span> <span class="dt">CSM</span> <span class="dt">Int</span> r <span class="dt">Int</span><br />baz <span class="fu">=</span> <span class="kw">do</span> { put <span class="dv">40</span>; tick; tick; get }</code></pre>
+<p>...i sprawdź, że działa:</p>
+<pre><code>*Main&gt; runCont baz const 0
+42
+</code></pre>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">
+/*<![CDATA[*/
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode, table.sourceCode pre 
+   { margin: 0; padding: 0; border: 0; vertical-align: baseline; border: none; }
+td.lineNumbers { border-right: 1px solid #AAAAAA; text-align: right; color: #AAAAAA; padding-right: 5px; padding-left: 5px; }
+td.sourceCode { padding-left: 5px; }
+code.sourceCode span.kw { color: #007020; font-weight: bold; } 
+code.sourceCode span.dt { color: #902000; }
+code.sourceCode span.dv { color: #40a070; }
+code.sourceCode span.bn { color: #40a070; }
+code.sourceCode span.fl { color: #40a070; }
+code.sourceCode span.ch { color: #4070a0; }
+code.sourceCode span.st { color: #4070a0; }
+code.sourceCode span.co { color: #60a0b0; font-style: italic; }
+code.sourceCode span.ot { color: #007020; }
+code.sourceCode span.al { color: red; font-weight: bold; }
+code.sourceCode span.fu { color: #06287e; }
+code.sourceCode span.re { }
+code.sourceCode span.er { color: red; font-weight: bold; }
+/*]]>*/
+  </style>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+<body>
+<h1 id="&#263;wiczenie---kontynuacje-a-stan">Ćwiczenie - kontynuacje a stan</h1>
+<pre><code>Stan:
+ s -&gt; (a,s)
+
+CPS:   s -&gt; ((a,s) -&gt; r) -&gt; r
+curry: s -&gt; (a -&gt; s -&gt; r) -&gt; r
+flip:  (a -&gt; s -&gt; r) -&gt; s -&gt; r
+</code></pre>
+<p>Zdefiniuj</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">CS</span> s a r <span class="fu">=</span> (a <span class="ot">-&gt;</span> s <span class="ot">-&gt;</span> r) <span class="ot">-&gt;</span> s <span class="ot">-&gt;</span> r<br /><span class="co">-- Odpowiednik Functor</span><br /><span class="ot">csmap </span><span class="ot">::</span> (a<span class="ot">-&gt;</span>b) <span class="ot">-&gt;</span> <span class="dt">CS</span> s a r <span class="ot">-&gt;</span> <span class="dt">CS</span> s b r<br /><br /><span class="co">-- Odpowiednik Monad</span><br /><span class="ot">cspure </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">CS</span> s a r<br /><span class="ot">csbind </span><span class="ot">::</span> <span class="dt">CS</span> s a r <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">CS</span> s b r) <span class="ot">-&gt;</span> <span class="dt">CS</span> s b r</code></pre>
+<p>i sprawdź, że działa:</p>
+<pre><code>&gt;&gt;&gt; foo (\a s -&gt; show a) 17
+&quot;42&quot;
+</code></pre>
+<h1 id="&#263;wiczenie---kontynuacje-a-stan-2">Ćwiczenie - kontynuacje a stan (2)</h1>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="co">-- Odpowiednik MonadState</span><br /><span class="co">-- get :: MonadState s m =&gt; m s</span><br /><span class="ot">csget </span><span class="ot">::</span> <span class="dt">CS</span> s s r<br /><br /><span class="co">-- put :: MonadState s m =&gt; s -&gt; m ()</span><br /><span class="ot">csput </span><span class="ot">::</span> s <span class="ot">-&gt;</span> <span class="dt">CS</span> s () r<br /><br /><span class="ot">csmodify </span><span class="ot">::</span> (s<span class="ot">-&gt;</span>s) <span class="ot">-&gt;</span> <span class="dt">CS</span> s () r<br />csmodify t <span class="fu">=</span> csget <span class="ot">`csbind`</span> (\s <span class="ot">-&gt;</span> csput (t s))<br /><br /><span class="ot">cstick </span><span class="ot">::</span> <span class="dt">CS</span> <span class="dt">Int</span> () r<br />cstick <span class="fu">=</span> csmodify (<span class="fu">+</span><span class="dv">1</span>)<br /><br /><span class="ot">bar </span><span class="ot">::</span> <span class="dt">CS</span> <span class="dt">Int</span> <span class="dt">Int</span> r<br />bar <span class="fu">=</span> csput <span class="dv">40</span> <span class="ot">`csthen`</span> cstick <span class="ot">`csthen`</span> cstick <span class="ot">`csthen`</span> csget</code></pre>
+<p>...i sprawdź, że działa:</p>
+<pre><code>*Main&gt; bar const 0
+42
+</code></pre>
+<p>Uwaga:</p>
+<ul>
+<li>nie importuj Control.Monad.State</li>
+<li>nie zaglądaj do jego źródeł</li>
+</ul>
+<h1 id="&#263;wiczenie---kontynuacje-a-stan-3">Ćwiczenie - kontynuacje a stan (3)</h1>
+<p>Zdefiniuj monadę stanu przy pomocy Cont:</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="ot">{-# LANGUAGE TypeSynonymInstances,FlexibleInstances, MultiParamTypeClasses #-}</span><br /><span class="kw">import</span> <span class="dt">Control.Monad.Cont</span><br /><span class="co">-- Uwaga: nie importujemy Control.Monad.State</span><br /><span class="kw">class</span> (<span class="kw">Monad</span> m) <span class="ot">=&gt;</span> <span class="dt">MonadState</span> s m <span class="fu">|</span> m <span class="ot">-&gt;</span> s <span class="kw">where</span><br /><span class="ot">    get </span><span class="ot">::</span> m s<br /><span class="ot">    put </span><span class="ot">::</span> s <span class="ot">-&gt;</span> m ()<br /><span class="ot">modify </span><span class="ot">::</span> (<span class="dt">MonadState</span> s m) <span class="ot">=&gt;</span> (s <span class="ot">-&gt;</span> s) <span class="ot">-&gt;</span> m ()<br />modify f <span class="fu">=</span> <span class="kw">do</span> { s <span class="ot">&lt;-</span> get; put (f s) }<br /><br /><span class="co">-- w miejsce X wstaw wyra&#380;enie u&#380;ywaj&#261;ce Cont, s, r</span><br /><span class="kw">type</span> <span class="dt">CSM</span> s r a <span class="fu">=</span> <span class="dt">X</span> a <br /><br /><span class="kw">instance</span> <span class="dt">MonadState</span> s <span class="dt">X</span> <span class="kw">where</span><br /><span class="fu">...</span><br /><span class="co">-- Wskaz&#243;wka: cont :: ((a-&gt;s-&gt;r)-&gt;s -&gt; r) -&gt; Cont (s-&gt;r) a</span><br /><br /><span class="ot">tick </span><span class="ot">::</span> <span class="dt">CSM</span> <span class="dt">Int</span> r <span class="dt">Int</span><br />tick <span class="fu">=</span> modify (<span class="fu">+</span><span class="dv">1</span>)<br /><br /><span class="ot">baz </span><span class="ot">::</span> <span class="dt">CSM</span> <span class="dt">Int</span> r <span class="dt">Int</span><br />baz <span class="fu">=</span> <span class="kw">do</span> { put <span class="dv">40</span>; tick; tick; get }</code></pre>
+<p>...i sprawdź, że działa:</p>
+<pre><code>*Main&gt; runCont baz const 0
+42
+</code></pre>
+</body>
+</html>
