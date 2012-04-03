@@ -161,6 +161,19 @@ pythagoras_cps x y k =
 25
 ~~~~
 
+# Na marginesie: transformacja CPS
+
+`T` zamienia term typu `a` na `((a->r)->r)`
+
+~~~~
+
+T(x) = \k -> k x
+T(\x -> M) = \k.k(\x -> T(M))
+T(MN) = \k -> T(M)(\m -> 
+              T(N)(\n -> 
+              mnk))
+~~~~
+
 # Monada kontynuacji
 
 ~~~~ {.haskell}

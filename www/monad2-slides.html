@@ -508,6 +508,16 @@ doSomethingElse
 </code></pre>
 </div>
 <div class="slide">
+<h1 id="na-marginesie-transformacja-cps">Na marginesie: transformacja CPS</h1>
+<p><code>T</code> zamienia term typu <code>a</code> na <code>((a-&gt;r)-&gt;r)</code></p>
+<pre><code><br />T(x) = \k -&gt; k x
+T(\x -&gt; M) = \k.k(\x -&gt; T(M))
+T(MN) = \k -&gt; T(M)(\m -&gt; 
+              T(N)(\n -&gt; 
+              mnk))
+</code></pre>
+</div>
+<div class="slide">
 <h1 id="monada-kontynuacji">Monada kontynuacji</h1>
 <pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">Cont</span> r a <span class="fu">=</span> (a <span class="ot">-&gt;</span> r) <span class="ot">-&gt;</span> r<br /><span class="co">-- Zwi&#261;zek z logik&#261;:  Cont a &#8764; (a &#8594; &#8869;) &#8594; &#8869; = &#172;&#172;a</span><br /><br /><span class="ot">contra </span><span class="ot">::</span> (a<span class="ot">-&gt;</span>b) <span class="ot">-&gt;</span> (b<span class="ot">-&gt;</span>r) <span class="ot">-&gt;</span> (a<span class="ot">-&gt;</span>r)<br />contra f g <span class="fu">=</span> g <span class="fu">.</span> f<br /><br /><span class="ot">cmap </span><span class="ot">::</span> (a <span class="ot">-&gt;</span> b) <span class="ot">-&gt;</span> <span class="dt">Cont</span> r a <span class="ot">-&gt;</span> <span class="dt">Cont</span> r b<br /><span class="co">--   :: (a -&gt; b) -&gt; ((a -&gt; r) -&gt; r) -&gt;  (b -&gt; r) -&gt; r</span><br />cmap f m <span class="fu">=</span> \c <span class="ot">-&gt;</span> m <span class="fu">$</span> c <span class="fu">.</span> f <span class="co">-- \c -&gt; m (contra f c)</span><br /><br /><span class="ot">cpure </span><span class="ot">::</span> a <span class="ot">-&gt;</span> <span class="dt">Cont</span> r a<br />cpure <span class="fu">=</span> <span class="fu">flip</span> (<span class="fu">$</span>) <span class="co">-- \a c -&gt; c a</span><br /><br /><span class="ot">cbind </span><span class="ot">::</span> <span class="dt">Cont</span> r a <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">Cont</span> r b) <span class="ot">-&gt;</span> <span class="dt">Cont</span> r b<br /><span class="co">-- ((a-&gt;r)-&gt;r)) -&gt; (a -&gt; (b-&gt;r)-&gt;r)</span><br />cbind m k <span class="fu">=</span> \c <span class="ot">-&gt;</span> m (\a <span class="ot">-&gt;</span> k a c)</code></pre>
 <p>Jak zwykle w bibliotece jest to zapakowane w newtype, ale mamy funkcje</p>
