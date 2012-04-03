@@ -95,3 +95,40 @@ baz = do { put 40; tick; tick; get }
 42
 ~~~~
 
+# Ćwiczenie: kontynuacje a błędy
+
+~~~~ {.haskell}
+{-
+Error: (a + e)
+CPS: ((a + e) -> r) -> r
+de Morgan: (a ->r,e -> r) -> r
+curry: (a->r) -> (e->r) -> r
+-}
+
+type CE e a r = (e->r) -> (a->r) -> r
+cemap :: (a->b) -> CE e a r -> CE e b r
+cepure :: a -> CE e a r
+cebind :: CE e a r -> (a -> CE e b r) -> CE e b r
+
+throwCE :: e -> CE e a r
+catchCE :: CE e a r -> (e -> CE e a r) -> CE e a r
+
+uncurryCE :: ((e->r) -> (a->r) -> r) -> ((e ->r,a -> r) -> r)
+-- Prelude.either :: (e->r) -> (a->r) -> Either e a ->r
+-- ~ ((e->r), (a->r)) -> Either e a ->r
+coeither :: (Either e a -> r) -> (e ->r, a -> r)
+morgan1 :: ((e ->r,a -> r) -> r) -> (Either e a -> r) -> r
+morgan2 :: ((Either e a -> r) -> r) -> (e -> r, a -> r) -> r
+
+-- te funkcje ustanawiaja izomorfizm
+iso1 :: ((e->r) -> (a->r) -> r) -> ((Either e a) -> r) ->r
+iso2 :: ((Either e a -> r) -> r) -> (e -> r) -> (a -> r) -> r
+
+
+newtype CEM e r a = CEM { runCEM :: Cont r (Either e a) }
+toCEM :: CE e a r -> CEM e r a
+fromCEM :: CEM e r a -> CE e a r
+
+instance Monad (CEM e r) where ...  
+instance (Error e) => MonadError e (CEM e r) where...
+~~~~ 
