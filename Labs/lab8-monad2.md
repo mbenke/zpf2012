@@ -19,6 +19,8 @@ csmap :: (a->b) -> CS s a r -> CS s b r
 -- Odpowiednik Monad
 cspure :: a -> CS s a r
 csbind :: CS s a r -> (a -> CS s b r) -> CS s b r
+
+foo = csmap (+1) (cspure 41)
 ~~~~
 
 i sprawdź, że działa:
