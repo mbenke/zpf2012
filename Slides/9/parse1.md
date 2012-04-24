@@ -271,7 +271,7 @@ addExpected x (UnknownError _) = Expected [x]
 addExpected x (Unexpected _) = Expected [x]
 ~~~~
 
-Ćwiczenie: zmodyfikuj swoje rozwiązanie poprzeniego ćwiczenia by działało jak Parsec:
+Ćwiczenie: zmodyfikuj swoje rozwiązanie poprzedniego ćwiczenia by działało jak Parsec:
 
 ~~~~
 Prelude Text.Parsec> parse digit "" ""

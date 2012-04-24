@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">
+/*<![CDATA[*/
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode, table.sourceCode pre 
+   { margin: 0; padding: 0; border: 0; vertical-align: baseline; border: none; }
+td.lineNumbers { border-right: 1px solid #AAAAAA; text-align: right; color: #AAAAAA; padding-right: 5px; padding-left: 5px; }
+td.sourceCode { padding-left: 5px; }
+code.sourceCode span.kw { color: #007020; font-weight: bold; } 
+code.sourceCode span.dt { color: #902000; }
+code.sourceCode span.dv { color: #40a070; }
+code.sourceCode span.bn { color: #40a070; }
+code.sourceCode span.fl { color: #40a070; }
+code.sourceCode span.ch { color: #4070a0; }
+code.sourceCode span.st { color: #4070a0; }
+code.sourceCode span.co { color: #60a0b0; font-style: italic; }
+code.sourceCode span.ot { color: #007020; }
+code.sourceCode span.al { color: red; font-weight: bold; }
+code.sourceCode span.fu { color: #06287e; }
+code.sourceCode span.re { }
+code.sourceCode span.er { color: red; font-weight: bold; }
+/*]]>*/
+  </style>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+<body>
+<h1 id="lepsza-obs&#322;uga-b&#322;&#281;d&#243;w">Lepsza obsługa błędów</h1>
+<p>Chcielibyśmy, by komunikat o błędzie podawał:</p>
+<ul>
+<li>gdzie wystąpił błąd</li>
+<li>czego oczekiwano...</li>
+</ul>
+<p>Dla zrealizowania pierwszego postulatu, stan musi przechowywać bieżącą pozycję, np.</p>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">newtype</span> <span class="dt">State</span> <span class="fu">=</span> <span class="dt">State</span> {<span class="ot">stPos </span><span class="ot">::</span> <span class="dt">Pos</span>,<span class="ot"> stInput </span><span class="ot">::</span> <span class="dt">String</span>}</code></pre>
+<ul>
+<li><p>Ćwiczenie: zmodyfikuj MyParsec2a tak, aby przechowywał i raportował pozycje błędów.</p></li>
+<li><p>Ćwiczenie: zmodyfikuj swoje rozwiązanie poprzeDniego ćwiczenia by działało jak Parsec:</p></li>
+</ul>
+<pre><code>Prelude Text.Parsec&gt; parse digit &quot;&quot; &quot;&quot;
+Left (line 1, column 1):
+unexpected end of input
+expecting digit
+</code></pre>
+<ul>
+<li><p>Ćwiczenie: połączyć pomysły 2c (Empty/Consumed) i 3a (kontynuacje) ewentualnie można jeszcze dołożyć 2b (obsługa błędów).</p></li>
+<li><p>Wskazówka:</p></li>
+</ul>
+<pre class="sourceCode"><code class="sourceCode haskell"><span class="kw">newtype</span> <span class="dt">Parser</span> a <span class="fu">=</span> <span class="dt">Parser</span> {<span class="ot">unParser </span><span class="ot">::</span> forall b <span class="fu">.</span><br />                 <span class="dt">State</span><br />              <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">State</span> <span class="ot">-&gt;</span> <span class="dt">ParseError</span> <span class="ot">-&gt;</span> b) <span class="co">-- consumed ok</span><br />              <span class="ot">-&gt;</span> (<span class="dt">ParseError</span> <span class="ot">-&gt;</span> b)               <span class="co">-- consumed err</span><br />              <span class="ot">-&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">State</span> <span class="ot">-&gt;</span> <span class="dt">ParseError</span> <span class="ot">-&gt;</span> b) <span class="co">-- empty ok</span><br />              <span class="ot">-&gt;</span> (<span class="dt">ParseError</span> <span class="ot">-&gt;</span> b)               <span class="co">-- empty err</span><br />              <span class="ot">-&gt;</span> b<br />             }</code></pre>
+</body>
+</html>
