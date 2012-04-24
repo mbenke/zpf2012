@@ -1,22 +1,22 @@
-module MyParsec2a
+module MyParsec3a
        ( testP,
          parse,
          Parser,
          char,
          (<|>),
-         module MyParsec2a.Combinators,
+         module MyParsec3a.Combinators,
   )where
-import MyParsec2a.Prim
-import MyParsec2a.Combinators
+import MyParsec3a.Prim
+import MyParsec3a.Combinators
 import Data.Char(isDigit,digitToInt)
 
 parse :: Parser a -> String -> String -> Either ParseError a
-parse p fname input = case runParser p input of
-  Ok a st -> Right a
-  Error e -> Left e
+parse p fname input = runParser p input 
+  (\a st -> Right a) -- cok
+  (\e -> Left e)       -- cerr
 
 testP :: Show a => Parser a -> State -> Reply a
-testP = runParser
+testP p input = runParser p input Ok Error
   
 p0 = return ()
 test0 = testP p0 ""

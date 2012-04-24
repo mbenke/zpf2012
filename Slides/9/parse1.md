@@ -282,6 +282,130 @@ expecting digit
 
 # Usprawnianie
 
+~~~~ {.haskell}
+gen 0 = "1"
+gen n = ('1':'+':'1':'-':gen (n-1))
+
+pNum :: Parser Int
+pNum = fmap digitToInt digit
+
+pExp = pNum `chainl1` addop
+addop   =   do{ char '+'; return (+) }
+          <|> do{ char '-'; return (-) }
+
+test n =  parse pExp "gen" (gen n)
+~~~~
+
+Parsec jest szybszy niz nasze kombinatory:
+
+~~~~
+parsec 3:
+benchmarking gen 1e5
+collecting 100 samples, 1 iterations each, in estimated 8.396387 s
+mean: 108.4311 ms, lb 104.1851 ms, ub 112.6549 ms, ci 0.950
+std dev: 21.71925 ms, lb 20.55811 ms, ub 23.11727 ms, ci 0.950
+
+MyParsec2a:
+benchmarking gen 100000
+collecting 100 samples, 1 iterations each, in estimated 13.94670 s
+mean: 138.7350 ms, lb 136.4866 ms, ub 141.5722 ms, ci 0.950
+~~~~
+
+Szczegóły: pmresults.txt
+
+# Koszt alternatywy
+
+Alternatywa jest kosztowna:
+
+~~~~ {.haskell}
+parserPlus p q = Parser $ \s -> case runParser p s of
+  Error e -> runParser q s
+  ok -> ok
+~~~~
+
+
+Wejście dla `q` nie może zostać zwolnione zanim `p` się nie skończy -
+potencjalny wyciek pamięci.
+
+Idea: przy alternatywie `p <|> q` uzywamy `q` tylko gdy `p` zawodzi 
+nie konsumując wejścia. 
+
+Wtedy możemy zwolnić wejście dla `q`, gdy tylko `p` skonsumuje choć jeden znak.
+
+~~~~ {.haskell}
+data Consumed a = Consumed (Reply a)
+                | Empty (Reply a)
+
+parserPlus :: Parser a -> Parser a -> Parser a
+parserPlus p q = Parser $ \s -> case runParser p s of
+  Empty (Error e) -> runParser q s
+  Empty ok -> Empty ok
+  consumed -> consumed
+~~~~
+
+# Implementacja
+
+~~~~ {.haskell}
+-- Code/Parse1/MyParsec2c
+data Consumed a = Consumed (Reply a)
+                | Empty (Reply a)
+
+newtype Parser a = Parser { runParser :: State -> Consumed a }
+
+satisfy p = Parser sat' where 
+  sat' []    = Empty(Error (expected "EOF")) -- or check (p EOF)
+  sat' (a:s) = if (p a) then Consumed(Ok a s) else 
+                 Empty(Error (unexpected $ show a) )
+~~~~
+
+# Sekwencjonowanie
+
+Clou programu:
+
+~~~~ {.haskell}
+instance Monad Parser where
+  return a = Parser $ \s -> Empty(Ok a s)
+  
+  p >>= k = Parser $ \st -> case runParser p st of
+      Empty reply -> case reply of
+        Ok a s' -> runParser (k a) s'
+        Error e -> Empty $ Error e
+      Consumed reply -> Consumed (case reply of
+        Ok a s' -> case runParser (k a) s' of
+                      Empty r -> r
+                      Consumed r -> r
+        Error e -> Error e)
+~~~~
+
+Jeżeli `p` konsumuje wejście, to `p >>= k` obliczy się do `Consumed x`, a x pozostanie nie obliczone (z uwagi na leniwość!). Operacje `Parser/runParser` zostaną wyoptymalizowane (uwaga: `newtype`)
+
+Zatem `(p >> długieobliczenie) <|> q` może zwolnić `q` i wejście dla niego gdy tylko `p` skonsumuje pierwszy znak, nie czekając aż zakończy się `długieobliczenie`.
+
+# Benchmark
+
+~~~~
+GHCOPTS=-O -rtsopts
+pm2c +RTS -s -RTS:
+benchmarking gen 100000
+mean: 40.95024 ms, lb 39.81659 ms, ub 42.13325 ms
+   4,815,377,360 bytes allocated in the heap
+   2,136,425,484 bytes copied during GC
+       6,267,672 bytes maximum residency (343 sample(s))
+              21 MB total memory in use (0 MB lost due to fragmentation)
+  MUT     time   11.19s  ( 12.45s elapsed)
+  GC      time    4.36s  (  4.53s elapsed)
+
+pm2a +RTS -s -RTS:
+benchmarking gen 100000
+mean: 141.0365 ms, lb 138.7846 ms, ub 143.5224 ms
+   7,535,812,664 bytes allocated in the heap
+   4,317,341,644 bytes copied during GC
+      16,940,736 bytes maximum residency (301 sample(s))
+              47 MB total memory in use (0 MB lost due to fragmentation)
+  MUT     time   10.31s  ( 11.32s elapsed)
+  GC      time    8.23s  (  8.72s elapsed)
+~~~~
+
 # Parsec3: kontynuacje
 
 ~~~~ {.haskell}
@@ -302,3 +426,59 @@ eof a = Parsec eof' where
   eof' _ cok cerr = cerr (expected "EOF")
 ~~~~
 
+#
+
+~~~~ {.haskell}
+instance Monad Parser where
+  return a = Parser (pure a) where
+    pure a s cok _ = cok a s
+  
+  m >>= k = Parser (bind m k) where 
+    bind (Parser f) k s cok cerr = f s mcok cerr where
+      mcok a s = runParser (k a) s cok cerr
+      mcerr = undefined
+
+parserPlus :: Parser a -> Parser a -> Parser a
+parserPlus p q = Parser $ \s cok cerr -> let
+    pok = cok
+    perr = \e -> runParser q s cok cerr
+ in runParser p s pok perr 
+~~~~
+
+# Benchmark
+
+~~~~
+GHCOPTS=-O -rtsopts
+pm2c +RTS -s -RTS:
+benchmarking gen 100000
+mean: 40.95024 ms, lb 39.81659 ms, ub 42.13325 ms
+   4,815,377,360 bytes allocated in the heap
+   2,136,425,484 bytes copied during GC
+       6,267,672 bytes maximum residency (343 sample(s))
+              21 MB total memory in use (0 MB lost due to fragmentation)
+
+pm3a +RTS -s -RTS:
+benchmarking gen 100000
+mean: 35.37689 ms, lb 34.61368 ms, ub 36.20859 ms
+   4,209,433,272 bytes allocated in the heap
+   2,128,069,148 bytes copied during GC
+       6,234,896 bytes maximum residency (309 sample(s))
+              21 MB total memory in use (0 MB lost due to fragmentation)
+~~~~
+
+# Ćwiczenie
+
+* Ćwiczenie: połączyć pomysły 2c (Empty/Consumed) i 3a (kontynuacje) ewentualnie można jeszcze dołożyć 2b (obsługa błędów).
+
+* Wskazówka:
+
+~~~~ {.haskell}
+newtype Parser a = Parser {unParser :: forall b .
+                 State
+              -> (a -> State -> ParseError -> b) -- consumed ok
+              -> (ParseError -> b)               -- consumed err
+              -> (a -> State -> ParseError -> b) -- empty ok
+              -> (ParseError -> b)               -- empty err
+              -> b
+             }
+~~~~
