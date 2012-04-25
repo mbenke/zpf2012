@@ -58,11 +58,13 @@ Ok "q" ""
 # Podstawowe kombinatory
 
 ~~~~ {.haskell}
+item :: Parser Char
 item = Parser item0 where
   item0 :: State -> Reply Char
   item0 [] = Error $ unexpected "EOF"
   item0 (x:xs) = Ok x xs
 
+eof :: Parser ()
 eof = Parser eof' where
   eof' [] = Ok () []
   eof' _ = Error (expected "EOF")
@@ -70,6 +72,7 @@ eof = Parser eof' where
 char :: Char -> Parser Char
 char c = (satisfy (==c)) 
 
+satisfy :: (Char->Bool) -> Parser Char
 satisfy p = Parser sat' where 
   sat' []    = Error (expected "EOF") -- or check (p EOF)
   sat' (a:s) = if (p a) then Ok a s else Error (unexpected $ show a) 
@@ -244,7 +247,7 @@ newtype State = State {stPos :: Pos, stInput :: String}
 digit :: Parser Char
 digit = satisfy isDigit <?> "digit"
 
--- *MyParsec2b Text.Parsec> test4b
+-- *MyParsec2b> test4b
 -- Error (Expected ["digit"])
 ~~~~
 
