@@ -33,7 +33,37 @@ Elementami typu `M a` są obliczenia dające wynik typu `a`
     readChan stdin >>=   (\userInput -> ... )
     ~~~~
 
-Każda monada jest/powinna być. To, że Functor nie jest nadklasą Monad jest li tylko zaszłością.
+Każda monada jest/powinna być funktorem. To, że Functor nie jest nadklasą Monad jest li tylko zaszłością.
+
+# Prawa monadyki
+Każda monada musi spełniać następujące prawa:
+
+~~~~
+   1. (return x) >>= k == k x
+   2. m >>= return == m
+   3. (m >>= f) >>= g == m >>= (\x -> (f x >>= g))
+~~~~
+
+Pierwsze dwa prawa mówią, że `return` nie ma efektów; jest elementem neutralnym dla `(>>=)`
+
+Trzecie prawo mówi, że sekwencjonowanie obliczeń jest łączne, czyli w pewnym sensie, że 
+
+~~~~
+ (o1;o2);o3 === o1;(o2;o3)
+~~~~
+
+...i możemy je traktować jako sekwencję `o1;o2;o3`
+
+# Prawa monadyki, inaczej
+
+~~~~
+(>=>)       :: Monad m => (a -> m b) -> (b -> m c) -> (a -> m c)
+f >=> g     = \x -> (f x >>= g)
+
+1. return >=> g     = g
+2. f >=> return     = f
+3. (f >=> g) >=> h  = f >=> (g >=> h)
+~~~~
 
 # Inna prezentacja monad
 
@@ -142,7 +172,7 @@ type SM a = S -> (a,S)
 
 -- Nie można napisać instance Functor SM ...
 smap :: (a->b) -> (SM a -> SM b)
-smap f t = first f . t -- \s -> ffirst f (t s)
+smap f t = first f . t -- \s -> first f (t s)
 
 spure :: a -> SM a
 spure a s = (a, s)
@@ -154,7 +184,6 @@ sbind f k = \s -> let (a,s') = f s in k a s'
 sjoin :: SM (SM a) -> SM a
 -- sjoin :: (S -> (S -> (a,S),S)) -> S -> (a,S)
 sjoin mma = \s -> let (ma,s') = mma s in ma s'
-
 
 -- uncurry ($) :: (b -> c, b) -> c
 sjoin' :: SM (SM a) -> SM a
@@ -247,6 +276,29 @@ doSomethingElse
 ~~~~
 
 Zwykle kolejność obliczeń jest nam obojętna, ale np. w wypadku IO...
+
+# Czytelnik
+
+Okrojona wersja stanu (stan sie nie zmienia):
+
+~~~~ {.haskell}
+type E = Int  -- na przykład
+type RM a = E -> a
+
+rmap :: (a->b) -> RM a -> RM b
+rmap = (.)
+
+rpure :: a -> RM a
+rpure = const
+
+rbind :: RM a -> (a -> RM b) -> RM b
+-- (E -> a) -> (a -> E -> b) -> E -> b
+rbind m k e = k (m e) e
+
+rjoin :: RM (RM e) -> RM e
+-- (E -> E -> a) -> (E -> a) 
+rjoin mm e = mm e e
+~~~~
 
 # Monada kontynuacji
 
