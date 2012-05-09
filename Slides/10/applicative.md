@@ -91,11 +91,11 @@ eval1 (Add p q) env = eval1 p env + eval1 q env
 
 eval2 (Var x) = fetch x
 eval2 (Val i) = k i
-eval2 (Add p q) = k (+) `s` eval p `s` eval q
+eval2 (Add p q) = k (+) `s` eval2 p `s` eval2 q
 
 k x y = x
 s :: (env -> a -> b) -> (env -> a) -> (env -> b)
-s ef es env = (ef env)
+s ef es env = (ef env) (es env)
 ~~~~
 
 # Klasa Applicative
