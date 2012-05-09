@@ -101,6 +101,7 @@ s ef es env = (ef env)
 # Klasa Applicative
 
 ~~~~ {.haskell}
+-- Control.Applicative
 class (Functor f) => Applicative f where  
     pure :: a -> f a  
     (<*>) :: f (a -> b) -> f a -> f b  
@@ -114,8 +115,10 @@ instance Applicative Maybe where
   (Just f) <*> (Just x) = Just (f x)
   _        <*> _ = Nothing
   
--- >>> pure id <*> Just 5
--- Just 5
+-- >>> fmap (+1) (Just 5)
+-- Just 6
+-- >>> pure (+1) <*> Just 5
+-- Just 6
 -- >>> pure (+) <*> Just 2 <*> Just 2
 -- Just 4
 ~~~~
@@ -263,4 +266,139 @@ True
 Idiom:
 True
 False
+~~~~
+
+# Monoid
+
+~~~~ {.haskell}
+-- Data.Monoid
+class Monoid a where
+  mempty :: a
+  mappend :: a -> a -> a
+  mconcat :: [a] -> a
+  mconcat = foldr mappend mempty
+~~~~
+
+Monoid, aplikatywnie:
+
+~~~~ {.haskell}
+-- typ fantomowy: nie używa swojego argumentu
+newtype Accy o a = Acc{acc::o}
+
+instance Monoid o => Applicative (Accy o) where
+  pure _ = Acc mempty
+  Acc o1 <*> Acc o2 = Acc (o1 `mappend` o2)
+~~~~
+
+nie jest monadyczne, bo jak zdefiniować
+
+~~~~ {.haskell}
+(>>=) :: Accy o a -> (a->Accy o b) -> Accy o b
+~~~~
+
+# Akumulowanie błędów
+
+~~~~ {.haskell}
+data Except err a = Ok a | Failed err
+
+instance Monoid err => Applicative (Except err) where
+  pure = Ok
+  Ok f <*> Ok x = Ok (f x)
+  Ok _ <*> Failed err = Failed err
+  Failed err <*> Ok _ = Failed err
+  Failed e1 <*> Failed e2 = Failed (e1 `mappend` e2)
+~~~~
+
+trudno zrobić analog monadyczny
+
+# Składanie idiomów
+
+Składanie monad jest trudne (i nie zawsze możliwe). 
+
+Składanie idiomów jest łatwe
+
+~~~~ {.haskell}
+newtype (g :. f) a = O { unO :: (g (f a)) }
+
+instance (Applicative g, Applicative f) => Applicative (g :. f) where
+  pure  = O . pure . pure
+  O gs <*> O xs = -- O (| (<*>) gs xs |) 
+                  O ( (<*>) <$> gs <*> xs)
+~~~~
+
+**Ćwiczenie:** zdefiniować
+
+~~~~ {.haskell}
+instance (Functor g, Functor f) => Functor (g :. f) where ...
+~~~~
+
+i sprawdzić, że złożenie funktorów aplikatywnych spełnia prawa dla funktora aplikatywnego.
+
+# Kategoryjnie: strong lax monoidal functor
+
+~~~~ {.haskell}
+class Functor f => Monoidal f where                  
+  unit :: f ()
+  pair :: f a -> f b -> f (a,b)
+  
+instance Applicative f => Monoidal f where
+  unit = pure ()
+  pair fa fb = (,) <$> fa <*> fb
+  
+instance Monoidal f => Applicative f where  
+  pure x = fmap (const x) unit
+  mf <*> mx = fmap ($) (pair mf mx)
+~~~~
+
+Żeby uzyskać prawdziwą równoważność trzeba oczywiście mieć pewne prawa
+dla Monoidal. Okazuje się, że jest to coś, co w teori kategorii nazywa
+się *strong lax monoidal functor* ;-)
+
+# Parsery
+
+Zauważmy natomiast, że `Monoidal` jest naturalną strukturą dla parserów
+
+~~~~ {.haskell}
+class Functor f => Monoidal f where                  
+  unit :: f ()
+  pair :: f a -> f b -> f (a,b)
+
+emptyP :: Parser ()
+thenP :: Parser a -> Parser b -> Parser (a,b)
+~~~~
+
+tyle, że typy robią się skomplikowane, dlatego łatwiej używać `Applicative`
+
+~~~~ {.haskell}
+-- S   ->  ( S ) S | epsilon
+parens = (\_ s _ s2 -> max (1+s) s2) <$> 
+         char '(' <*> parens <*> char ')' <*> parens 
+         <|> pure 0
+~~~~
+
+# Alternative
+
+Potrzebujemy jeszcze tylko alternatywy:
+
+~~~~ {.haskell}
+class Applicative f => Alternative f where
+  empty :: f a
+  (<|>) :: f a -> f a -> f a
+~~~~
+
+spełniającej aksjomaty monoidu. Patrz też MonadPlus:
+
+~~~~ {.haskell}
+class Monad m => MonadPlus m where
+  mzero :: m a
+  mplus :: m a -> m a -> m a
+
+-- mzero >>= f  =  mzero
+-- v >> mzero   =  mzero
+~~~~
+
+# Koniec
+
+~~~~ {.haskell}
+
 ~~~~
