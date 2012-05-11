@@ -1,4 +1,4 @@
-
+import Applicative
 import App1
 import Data.Char(digitToInt)
 import Criterion.Main
