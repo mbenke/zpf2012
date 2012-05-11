@@ -1,6 +1,11 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+module App1 where
 import Data.Char(isDigit,digitToInt)
 
 newtype Parser a = Parser{ runParser :: String -> [(a,String)]}
+parse p name input  = case runParser p input of
+  [] -> Left "no parse"
+  (x:_)-> Right x
 
 satisfy :: (Char->Bool) -> Parser Char
 satisfy p = Parser $ \s -> case s of
@@ -28,20 +33,24 @@ class Functor f => Applicative f where
   pure :: a -> f a
   (<*>)  :: f (a->b) -> f a -> f b
   -- (<$>) :: (a->b) -> f a -> f b
-  -- f <$> x  = fmap f x = pure f <*> x
+  -- f <$> x  = fmap f x 
+  
+-- | Replace the value.  
+(<$) :: Functor f => a -> f b -> f a
+(<$) = (<$>) . const
 
 -- | A synonym for 'fmap'.
 (<$>) :: Functor f => (a -> b) -> f a -> f b
 f <$> a = fmap f a
 
--- | Replace the value.
-(<$) :: Functor f => a -> f b -> f a
-(<$) = (<$>) . const
+
 
 instance Applicative Parser where
   pure a = Parser $ \s -> [(a,s)]
   (Parser pab) <*> (Parser pa) = Parser $ \s -> 
     [(f a,s2) | (f,s1) <- pab s, (a,s2) <- pa s1]
+  -- f <$> p = Parser $ \s -> for (runParser p s) (first f)
+  -- r <$ p = Parser $ \s -> for (runParser p s) (\(_,s1)->(r,s1))
     
 class Applicative f => Alternative f where
   empty :: f a
@@ -53,8 +62,7 @@ instance Alternative Parser where
   
 many, many1 :: Parser a -> Parser [a]
 many p  = many1 p <|> pure []
-many1 p = -- (:) <$> p <*> many p
-  p `pcons` many p where pcons = liftA2 (:)
+many1 p =(:) <$> p <*> many p
                          
 -- | Sequence actions, discarding the value of the first argument.
 (*>) :: Applicative f => f a -> f b -> f b
@@ -98,4 +106,24 @@ parens = (\_ s _ s2 -> max (1+s) s2) <$>
          
 parens2 = (\s s2 -> max (1+s) s2) <$> 
          (char '(' *> parens) <* char ')' <*> parens 
-         <|> pure 0         
+         <|> pure 0 
+
+-- C1 -> T C
+-- C -> op T C | empty
+chainr1 :: Parser a -> Parser (a->a->a) -> Parser a
+-- chainr1 x pop = x <**> f where
+chainr1 x pop = (flip ($)) <$> x <*> f where
+  -- f :: Parser (a -> a) 
+  f = (flip <$> pop <*> chainr1 x pop) <|> pure id
+
+-- pop :: Parser (a->a->a)
+-- flip pop :: Parser (a->a->a) 
+-- flip <$> pop <*> chainr1 x pop :: Parser (a->a)
+
+applyAll :: a -> [a->a] -> a
+applyAll x [] = x
+applyAll x (f:fs) = applyAll (f x) fs
+-- applyAll x [f] = f x
+
+chainl1 :: Parser a -> Parser (a->a->a) -> Parser a
+chainl1 pt pop = applyAll <$> pt <*> many (flip <$> pop <*> pt)
