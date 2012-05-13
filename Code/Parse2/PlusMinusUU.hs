@@ -23,7 +23,7 @@ pNum = fmap digitToInt digit
 chainl1 = flip pChainl
 pExp = pNum `chainl1` addop
 addop   =  (+) <$ char '+'
-       <|> (-) <$ char '-' 
+       <<|> (-) <$ char '-' 
        
 -- doparse :: Parser a -> String -> String -> a
 doparse p name input = let 
