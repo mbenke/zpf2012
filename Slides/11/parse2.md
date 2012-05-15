@@ -386,6 +386,31 @@ chainl1 :: Parser a -> Parser (a->a->a) -> Parser a
 chainl1 pt pop = applyAll <$> pt <*> many (flip <$> pop <*> pt)
 ~~~~
 
+# Obsługa błędów
+
+~~~~ {.haskell}
+data Steps a where 
+  Fail :: [String] -> Steps a
+  ...
+
+best :: Steps a -> Steps a -> Steps a
+best (Fail ls)(Fail rs) = Fail (ls++rs)
+...
+
+satisfy p = Ph $ \k s -> case s of
+  (c:cs) | p c -> Step (k c cs)
+         | otherwise -> Fail ["unexpected " ++ [c]]
+  [] -> Fail ["unexpected EOF"]
+
+parse p name input =  result (runParser p input) where
+  result (Done a) = Right a
+  result (Fail msgs) = Left msgs
+  result (Step x) = result x
+~~~~
+
+# Naprawa błędów
+
+
 # UU-parsinglib
 
 * Utrecht University, Doaitse Swierstra

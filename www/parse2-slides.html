@@ -339,6 +339,26 @@ many p  <span class="fu">=</span> (<span class="fu">:</span>) <span class="fu">&
 <span class="ot">chainl1 ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> (a<span class="ot">-&gt;</span>a<span class="ot">-&gt;</span>a) <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
 chainl1 pt pop <span class="fu">=</span> applyAll <span class="fu">&lt;$&gt;</span> pt <span class="fu">&lt;*&gt;</span> many (<span class="fu">flip</span> <span class="fu">&lt;$&gt;</span> pop <span class="fu">&lt;*&gt;</span> pt)</code></pre>
 </div>
+<div class="section slide level1" id="obsługa-błędów">
+<h1>Obsługa błędów</h1>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Steps</span> a <span class="kw">where</span> 
+  <span class="dt">Fail</span><span class="ot"> ::</span> [<span class="dt">String</span>] <span class="ot">-&gt;</span> <span class="dt">Steps</span> a
+  <span class="fu">...</span>
+
+<span class="ot">best ::</span> <span class="dt">Steps</span> a <span class="ot">-&gt;</span> <span class="dt">Steps</span> a <span class="ot">-&gt;</span> <span class="dt">Steps</span> a
+best (<span class="dt">Fail</span> ls)(<span class="dt">Fail</span> rs) <span class="fu">=</span> <span class="dt">Fail</span> (ls<span class="fu">++</span>rs)
+<span class="fu">...</span>
+
+satisfy p <span class="fu">=</span> <span class="dt">Ph</span> <span class="fu">$</span> \k s <span class="ot">-&gt;</span> <span class="kw">case</span> s <span class="kw">of</span>
+  (c<span class="fu">:</span>cs) <span class="fu">|</span> p c <span class="ot">-&gt;</span> <span class="dt">Step</span> (k c cs)
+         <span class="fu">|</span> <span class="fu">otherwise</span> <span class="ot">-&gt;</span> <span class="dt">Fail</span> [<span class="st">&quot;unexpected &quot;</span> <span class="fu">++</span> [c]]
+  [] <span class="ot">-&gt;</span> <span class="dt">Fail</span> [<span class="st">&quot;unexpected EOF&quot;</span>]
+
+parse p name input <span class="fu">=</span>  result (runParser p input) <span class="kw">where</span>
+  result (<span class="dt">Done</span> a) <span class="fu">=</span> <span class="kw">Right</span> a
+  result (<span class="dt">Fail</span> msgs) <span class="fu">=</span> <span class="kw">Left</span> msgs
+  result (<span class="dt">Step</span> x) <span class="fu">=</span> result x</code></pre>
+</div>
 <div class="section slide level1" id="uu-parsinglib">
 <h1>UU-parsinglib</h1>
 <ul>
