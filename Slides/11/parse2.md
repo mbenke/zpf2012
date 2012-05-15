@@ -167,18 +167,29 @@ best _ _ = error "incorrect parser" -- ambiguity
 
 # Recogniser
 
+Najpierw recogniser --- parser, który tylko bada przynależność do języka:
+
 ~~~~ {.haskell}
 newtype R a = R {unR :: forall r.(String -> Steps r) -> String -> Steps r}
 type Parser a = R a
 
 runParser :: Parser a -> String -> Steps String
 runParser (R p) input = p (\r -> Done r) input
+-- >>> runParser digit "123"
+-- Step (Done "23")
 
 satisfy :: (Char->Bool) -> R Char
 satisfy p = R $ \k s -> case s of
   (c:cs) | p c -> Step (k cs)
   _ -> Fail
 ~~~~
+
+NB
+
+* `R a` ignoruje `a`, bo nie daje wyniku
+
+* pierwszym argumentem parsera jest kontynuacja mówiąca, co zrobić
+  z resztą wejścia.
 
 # Applicative
 
@@ -187,7 +198,6 @@ instance Functor R where
   -- (a->b) -> R a -> R b
   fmap f (R q) = R q
   
-
 instance Applicative R where
   pure a = R ($) 
   (R p) <*> (R q) = R (\k s -> p (q k) s)
@@ -196,6 +206,13 @@ instance Alternative R where
   empty = R $ \k s -> Fail
   (R p) <|> (R q) = R (\k s -> p k s `best` q k s)
 ~~~~
+
+NB
+
+* `fmap` trywialne --- `R` jest funktorem stałym
+* `pure` ignoruje argument, aplikuje kontynuację
+* `<*>` składa kontynuacje
+* `<|>` wybiera lepszą alternatywę (lenistwo!)
 
 # Jeszcze sekwencje
 
@@ -236,10 +253,9 @@ instance Monoid (Steps a) where
   mempty = Fail
   mappend = best
 
--- P ~ a -> b -> ... -> s -> Steps t 
-instance Alternative P where
-  empty = P $ \k s -> mempty
-  (P p) <|> (P q) = P (p `mappend` q)
+instance Alternative R where
+  empty = R $ mempty  
+  (R p) <|> (R q) = R $ p `mappend` q
 ~~~~
 
 

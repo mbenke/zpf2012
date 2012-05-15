@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-} -- for syntax only
 module App2 where
 import Applicative
+import Monoid
 import Data.Char(isDigit,digitToInt)
 
 data Steps a where 
@@ -18,6 +19,10 @@ best x@(Step _) (Done _) = x -- prefer longer parse
 best (Done _) x@(Step _) = x
 best _ _ = error "incorrect parser" -- ambiguity
 
+instance Monoid (Steps a) where
+  mempty = Fail
+  mappend = best
+
 eval :: Steps a -> a
 eval (Step l) = eval l
 eval (Done v) = v
@@ -29,12 +34,16 @@ type Parser a = R a
 runParser :: Parser a -> String -> Steps String
 runParser (R p) input = p (\r -> Done r) input
 
+-- >>> runParser digit "123"
+-- Step (Done "23")
+
 parse :: R a -> String -> String -> Bool
 parse p name input = result (runParser p input) where
   result (Done _) = True
   result Fail = False
   result (Step x) = result x
   
+
 {-
 type Parser a = Recogniser String a
 parse p name input  = case runParser p input of
@@ -67,9 +76,10 @@ instance Applicative R where
   (R p) <*> (R q) = R (\k s -> p (q k) s)
     
 instance Alternative R where
-  empty = R $ \k s -> Fail
-  (R p) <|> (R q) = R (\k s -> p k s `best` q k s)
-  
+--  empty = R $ \k s -> Fail
+--  (R p) <|> (R q) = R (\k s -> p k s `best` q k s)
+  empty = R $ mempty  
+  (R p) <|> (R q) = R $ p `mappend` q
   
 many, many1 :: Parser a -> Parser [a]
 many p  = (:) <$> p <*> many p <|> pure []
