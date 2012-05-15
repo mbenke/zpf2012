@@ -243,6 +243,71 @@ chainl1 pt pop <span class="fu">=</span> applyAll <span class="fu">&lt;$&gt;</sp
   empty <span class="fu">=</span> <span class="dt">R</span> <span class="fu">$</span> mempty  
   (<span class="dt">R</span> p) <span class="fu">&lt;|&gt;</span> (<span class="dt">R</span> q) <span class="fu">=</span> <span class="dt">R</span> <span class="fu">$</span> p <span class="ot">`mappend`</span> q</code></pre>
 </div>
+<div class="section slide level1" id="polityka-historyczna-czyli-parsery-z-przeszłościa">
+<h1>Polityka historyczna, czyli parsery z przeszłościa</h1>
+<ul>
+<li><p>Idea: funkcje do zaaplikowania odkładamy na stos, tworząc “historię”</p></li>
+<li><p>Kontynuacja zalezy od historii i obliczonej wartości</p></li>
+</ul>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">newtype</span> <span class="dt">Ph</span> a <span class="fu">=</span> <span class="dt">Ph</span> {<span class="ot">unPh ::</span> forall r h<span class="fu">.</span>
+                           ((h,a) <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Steps</span> r) 
+                           <span class="ot">-&gt;</span> h <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Steps</span> r}
+<span class="kw">type</span> <span class="dt">Parser</span> a <span class="fu">=</span> <span class="dt">Ph</span> a
+runParser (<span class="dt">Ph</span> p) input <span class="fu">=</span> p (\(h,a) <span class="ot">-&gt;</span> (\s <span class="ot">-&gt;</span> <span class="dt">Done</span> a)) () input</code></pre>
+<p>Aplikacja funkcji ze szczytu stosu:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">aph ::</span> ((h,b<span class="ot">-&gt;</span>a),b) <span class="ot">-&gt;</span> (h,a)
+aph ((h,b2a),b) <span class="fu">=</span> (h,b2a b)
+
+<span class="kw">type</span> <span class="dt">Cont</span> h a <span class="fu">=</span> forall r<span class="fu">.</span>(h,a) <span class="ot">-&gt;</span> r
+<span class="ot">coaph ::</span> <span class="dt">Cont</span> h b  <span class="ot">-&gt;</span> <span class="dt">Cont</span> (h, (a<span class="ot">-&gt;</span>b)) a
+coaph k ((h,b2a),b) <span class="fu">=</span> k (h,b2a b)</code></pre>
+</div>
+<div class="section slide level1" id="functor-1">
+<h1>Functor</h1>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="kw">Functor</span> <span class="dt">Ph</span> <span class="kw">where</span>
+  <span class="co">-- (a-&gt;b) -&gt; (forall r h. ((h,a) -&gt; String -&gt; Steps r) </span>
+  <span class="co">--                      -&gt; h -&gt; String -&gt; Steps r)</span>
+  <span class="co">--        -&gt; (forall r h. ((h,b) -&gt; String -&gt; Steps r) </span>
+  <span class="co">--                      -&gt; h -&gt; String -&gt; Steps r)</span>
+  <span class="fu">fmap</span> f (<span class="dt">Ph</span> pka) <span class="fu">=</span> <span class="dt">Ph</span> (\kb <span class="ot">-&gt;</span> pka (kb <span class="fu">.</span> second f))
+
+<span class="co">-- pka: parser z kontynuacją dla a</span>
+<span class="co">-- kb : kontynuacja dla b</span>
+<span class="ot">second ::</span> (a<span class="ot">-&gt;</span>b) <span class="ot">-&gt;</span> (d,a) <span class="ot">-&gt;</span> (d,b)
+second f (d,a) <span class="fu">=</span> (d,f a)</code></pre>
+</div>
+<div class="section slide level1" id="applicative-2">
+<h1>Applicative</h1>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="kw">Applicative</span> <span class="dt">Ph</span> <span class="kw">where</span>
+  pure a <span class="fu">=</span> <span class="dt">Ph</span> (\k h  <span class="ot">-&gt;</span> k (h,a) )
+  <span class="co">-- Ph (a-&gt;b) -&gt; Ph a -&gt; Ph b</span>
+  (<span class="dt">Ph</span> p) <span class="fu">&lt;*&gt;</span> (<span class="dt">Ph</span> q) <span class="fu">=</span> <span class="dt">Ph</span> (\k <span class="ot">-&gt;</span> p (q (\((h,b2a),b)<span class="ot">-&gt;</span>k(h,b2a b)))) 
+    <span class="co">-- Ph(\k -&gt; p (q (coaph k))) </span>
+
+<span class="ot">coaph ::</span> <span class="dt">Cont</span> h b  <span class="ot">-&gt;</span> <span class="dt">Cont</span> (h, (a<span class="ot">-&gt;</span>b)) a
+coaph k ((h,b2a),b) <span class="fu">=</span> k (h,b2a b)</code></pre>
+<p><code>Alternative</code> jest łatwe dzieki <code>Monoid</code>:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="dt">Alternative</span> <span class="dt">Ph</span> <span class="kw">where</span>
+  empty <span class="fu">=</span> <span class="dt">Ph</span> <span class="fu">$</span> mempty
+  (<span class="dt">Ph</span> p) <span class="fu">&lt;|&gt;</span> (<span class="dt">Ph</span> q) <span class="fu">=</span> <span class="dt">Ph</span> <span class="fu">$</span> p <span class="ot">`mappend`</span> q</code></pre>
+<p>NB to wygląda analogicznie jak dla <code>R</code>, ale to jest jednak inna funkcja — “magia” odbywa się tu:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="dt">Monoid</span> b <span class="ot">=&gt;</span> <span class="dt">Monoid</span> (a <span class="ot">-&gt;</span> b) <span class="kw">where</span>
+  mempty <span class="fu">=</span> <span class="fu">const</span> mempty
+  mappend f g <span class="fu">=</span> \x <span class="ot">-&gt;</span>f x <span class="ot">`mappend`</span> g x</code></pre>
+</div>
+<div class="section slide level1" id="odrzućmy-balast-historii">
+<h1>Odrzućmy balast historii</h1>
+</div>
+<div class="section slide level1" id="problem">
+<h1>Problem</h1>
+<p>Jesli drzewo możliwości ma rozmiar wykładniczy, to obejście go BFS niekoniecznie jest najlepszym pomysłem…</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">pExp <span class="fu">=</span> (pNum <span class="ot">`chainl1`</span> addop) <span class="fu">&lt;*</span> eof
+addop   <span class="fu">=</span>  (<span class="fu">+</span>) <span class="fu">&lt;$</span> char <span class="ch">'+'</span>
+       <span class="fu">&lt;|&gt;</span> (<span class="fu">-</span>) <span class="fu">&lt;$</span> char <span class="ch">'-'</span> </code></pre>
+</div>
+<div class="section slide level1" id="greed-is-good">
+<h1>Greed is good</h1>
+</div>
 <div class="section slide level1" id="uu-parsinglib">
 <h1>UU-parsinglib</h1>
 <ul>

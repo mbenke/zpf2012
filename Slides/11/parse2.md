@@ -258,6 +258,108 @@ instance Alternative R where
   (R p) <|> (R q) = R $ p `mappend` q
 ~~~~
 
+# Polityka historyczna, czyli parsery z przeszłościa
+
+* Idea: funkcje do zaaplikowania odkładamy na stos, tworząc "historię"
+
+* Kontynuacja zalezy od historii i obliczonej wartości
+
+~~~~ {.haskell}
+newtype Ph a = Ph {unPh :: forall r h.
+                           ((h,a) -> String -> Steps r) 
+                           -> h -> String -> Steps r}
+type Parser a = Ph a
+runParser (Ph p) input = p (\(h,a) -> (\s -> Done a)) () input
+
+~~~~
+
+Aplikacja funkcji ze szczytu stosu:
+
+~~~~ {.haskell}
+aph :: ((h,b->a),b) -> (h,a)
+aph ((h,b2a),b) = (h,b2a b)
+
+type Cont h a = forall r.(h,a) -> r
+coaph :: Cont h b  -> Cont (h, (a->b)) a
+coaph k ((h,b2a),b) = k (h,b2a b)
+~~~~
+
+# Functor
+
+~~~~ {.haskell}
+instance Functor Ph where
+  -- (a->b) -> (forall r h. ((h,a) -> String -> Steps r) 
+  --                      -> h -> String -> Steps r)
+  --        -> (forall r h. ((h,b) -> String -> Steps r) 
+  --                      -> h -> String -> Steps r)
+  fmap f (Ph pka) = Ph (\kb -> pka (kb . second f))
+
+-- pka: parser z kontynuacją dla a
+-- kb : kontynuacja dla b
+second :: (a->b) -> (d,a) -> (d,b)
+second f (d,a) = (d,f a)
+~~~~
+
+# Applicative
+
+~~~~ {.haskell}
+instance Applicative Ph where
+  pure a = Ph (\k h  -> k (h,a) )
+  -- Ph (a->b) -> Ph a -> Ph b
+  (Ph p) <*> (Ph q) = Ph (\k -> p (q (\((h,b2a),b)->k(h,b2a b)))) 
+    -- Ph(\k -> p (q (coaph k))) 
+
+coaph :: Cont h b  -> Cont (h, (a->b)) a
+coaph k ((h,b2a),b) = k (h,b2a b)
+~~~~
+
+`Alternative` jest łatwe dzieki `Monoid`:
+
+~~~~ {.haskell}
+instance Alternative Ph where
+  empty = Ph $ mempty
+  (Ph p) <|> (Ph q) = Ph $ p `mappend` q
+~~~~
+
+NB to wygląda analogicznie jak dla `R`, ale to jest jednak inna funkcja
+--- "magia" odbywa się tu:
+
+~~~~ {.haskell}
+instance Monoid b => Monoid (a -> b) where
+  mempty = const mempty
+  mappend f g = \x ->f x `mappend` g x
+~~~~
+
+# Jak to działa
+
+~~~~
+pure digitToInt = Ph (\k h -> k (h, digitToInt))
+~~~~
+
+# Odrzućmy balast historii
+
+Skoro i tak uzywamy kontynuacji, to możemy sobie darować "przekładanie papierków"
+
+~~~~ {.haskell}
+newtype Ph a = Ph {unPh :: forall r.
+                           (a -> String -> Steps r) 
+                              -> String -> Steps r}
+runParser (Ph p) input = p (\a s -> checkEmpty a s) input where
+  checkEmpty a [] = Done a
+  checkEmpty a _ = Fail
+~~~~
+
+# Problem
+
+Jesli drzewo możliwości ma rozmiar wykładniczy, to obejście go BFS niekoniecznie jest najlepszym pomysłem...
+
+~~~~ {.haskell}
+pExp = (pNum `chainl1` addop) <* eof
+addop   =  (+) <$ char '+'
+       <|> (-) <$ char '-' 
+~~~~
+
+# Greed is good
 
 # UU-parsinglib
 

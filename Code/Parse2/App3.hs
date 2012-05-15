@@ -81,11 +81,16 @@ instance Applicative Ph where
   -- Ph (a->b) -> Ph a -> Ph b
   (Ph p) <*> (Ph q) = Ph (\k -> p (q (\((h,b2a),b)->k(h,b2a b)))) 
     -- Ph(\k -> p (q (coaph k))) 
-{-    
+
+{-
 instance Alternative Ph where
   empty = Ph $ \k h s -> Fail
   (Ph p) <|> (Ph q) = Ph(\k h s -> p k h s `best` q k h s)
+-}
   
+instance Alternative Ph where
+  empty = Ph $ mempty
+  (Ph p) <|> (Ph q) = Ph $ p `mappend` q
   
 many, many1 :: Parser a -> Parser [a]
 many p  = (:) <$> p <*> many p <|> pure []
@@ -130,4 +135,3 @@ applyAll x (f:fs) = applyAll (f x) fs
 
 chainl1 :: Parser a -> Parser (a->a->a) -> Parser a
 chainl1 pt pop = applyAll <$> pt <*> many (flip <$> pop <*> pt)
--}
