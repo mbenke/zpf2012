@@ -89,8 +89,11 @@ instance Alternative Ph where
   (Ph p) <|> (Ph q) = Ph (p `mappend` q)
                       -- (\k s -> p k s `mappend` q k s)
     
+opt :: Parser a -> a -> Parser a
+p `opt` v = p <<|> pure v
+
 many, many1 :: Parser a -> Parser [a]
-many p  = (:) <$> p <*> many p <<|> pure [] -- NB greedy
+many p  = (:) <$> p <*> many p `opt` [] -- NB greedy
 many1 p = (:) <$> p <*> many p
                          
 digit :: Parser Char
@@ -119,7 +122,7 @@ chainr1 :: Parser a -> Parser (a->a->a) -> Parser a
 -- chainr1 x pop = x <**> f where
 chainr1 x pop = (flip ($)) <$> x <*> f where
   -- f :: Parser (a -> a) 
-  f = (flip <$> pop <*> chainr1 x pop) <|> pure id
+  f = (flip <$> pop <*> chainr1 x pop) `opt` id
 
 -- pop :: Parser (a->a->a)
 -- flip pop :: Parser (a->a->a) 

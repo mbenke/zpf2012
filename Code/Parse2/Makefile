@@ -1,4 +1,4 @@
-BINFILES=pmuu pm1 pm2 pm3 pm4 pm4g
+BINFILES=pmuu pm1 pm2 pm4 pm4g
 GHCOPTS=-O -rtsopts
 
 all: $(BINFILES)

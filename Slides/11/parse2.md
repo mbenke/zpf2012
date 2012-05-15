@@ -338,7 +338,7 @@ pure digitToInt = Ph (\k h -> k (h, digitToInt))
 
 # Odrzućmy balast historii
 
-Skoro i tak uzywamy kontynuacji, to możemy sobie darować "przekładanie papierków"
+Skoro i tak używamy kontynuacji, to możemy sobie darować "przekładanie papierków"
 
 ~~~~ {.haskell}
 newtype Ph a = Ph {unPh :: forall r.
@@ -347,11 +347,19 @@ newtype Ph a = Ph {unPh :: forall r.
 runParser (Ph p) input = p (\a s -> checkEmpty a s) input where
   checkEmpty a [] = Done a
   checkEmpty a _ = Fail
+
+instance Functor Ph where
+  fmap f (Ph p) = Ph (\k -> p (k . f))
+                              
+instance Applicative Ph where
+  pure a = Ph (\k -> k a)
+  (Ph p) <*> (Ph q) = Ph (\k -> p (\f -> q (k . f)))
 ~~~~
 
 # Problem
 
-Jesli drzewo możliwości ma rozmiar wykładniczy, to obejście go BFS niekoniecznie jest najlepszym pomysłem...
+Jesli drzewo możliwości ma rozmiar wykładniczy, to obejście go BFS
+niekoniecznie jest najlepszym pomysłem...
 
 ~~~~ {.haskell}
 pExp = (pNum `chainl1` addop) <* eof
@@ -360,6 +368,23 @@ addop   =  (+) <$ char '+'
 ~~~~
 
 # Greed is good
+
+Rozwiązaniem może być "zachłanna" alternatywa (jak w Parsec-u):
+
+~~~~ {.haskell}
+(<<|>) :: Parser a -> Parser a -> Parser a
+(Ph p) <<|> (Ph q) = Ph (\k s -> p k s `bestg` q k s)
+
+bestg l@(Step _) _ = l -- greeedy
+bestg l r = best l r
+
+opt :: Parser a -> a -> Parser a
+p `opt` v = p <<|> pure v
+
+many p  = (:) <$> p <*> many p `opt` [] -- NB greedy
+chainl1 :: Parser a -> Parser (a->a->a) -> Parser a
+chainl1 pt pop = applyAll <$> pt <*> many (flip <$> pop <*> pt)
+~~~~
 
 # UU-parsinglib
 

@@ -295,8 +295,26 @@ coaph k ((h,b2a),b) <span class="fu">=</span> k (h,b2a b)</code></pre>
   mempty <span class="fu">=</span> <span class="fu">const</span> mempty
   mappend f g <span class="fu">=</span> \x <span class="ot">-&gt;</span>f x <span class="ot">`mappend`</span> g x</code></pre>
 </div>
+<div class="section slide level1" id="jak-to-działa">
+<h1>Jak to działa</h1>
+<pre><code>pure digitToInt = Ph (\k h -&gt; k (h, digitToInt))</code></pre>
+</div>
 <div class="section slide level1" id="odrzućmy-balast-historii">
 <h1>Odrzućmy balast historii</h1>
+<p>Skoro i tak używamy kontynuacji, to możemy sobie darować “przekładanie papierków”</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">newtype</span> <span class="dt">Ph</span> a <span class="fu">=</span> <span class="dt">Ph</span> {<span class="ot">unPh ::</span> forall r<span class="fu">.</span>
+                           (a <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Steps</span> r) 
+                              <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Steps</span> r}
+runParser (<span class="dt">Ph</span> p) input <span class="fu">=</span> p (\a s <span class="ot">-&gt;</span> checkEmpty a s) input <span class="kw">where</span>
+  checkEmpty a [] <span class="fu">=</span> <span class="dt">Done</span> a
+  checkEmpty a _ <span class="fu">=</span> <span class="dt">Fail</span>
+
+<span class="kw">instance</span> <span class="kw">Functor</span> <span class="dt">Ph</span> <span class="kw">where</span>
+  <span class="fu">fmap</span> f (<span class="dt">Ph</span> p) <span class="fu">=</span> <span class="dt">Ph</span> (\k <span class="ot">-&gt;</span> p (k <span class="fu">.</span> f))
+
+<span class="kw">instance</span> <span class="kw">Applicative</span> <span class="dt">Ph</span> <span class="kw">where</span>
+  pure a <span class="fu">=</span> <span class="dt">Ph</span> (\k <span class="ot">-&gt;</span> k a)
+  (<span class="dt">Ph</span> p) <span class="fu">&lt;*&gt;</span> (<span class="dt">Ph</span> q) <span class="fu">=</span> <span class="dt">Ph</span> (\k <span class="ot">-&gt;</span> p (\f <span class="ot">-&gt;</span> q (k <span class="fu">.</span> f)))</code></pre>
 </div>
 <div class="section slide level1" id="problem">
 <h1>Problem</h1>
@@ -307,6 +325,19 @@ addop   <span class="fu">=</span>  (<span class="fu">+</span>) <span class="fu">
 </div>
 <div class="section slide level1" id="greed-is-good">
 <h1>Greed is good</h1>
+<p>Rozwiązaniem może być “zachłanna” alternatywa (jak w Parsec-u):</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">(&lt;&lt;|&gt;) ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
+(<span class="dt">Ph</span> p) <span class="fu">&lt;&lt;|&gt;</span> (<span class="dt">Ph</span> q) <span class="fu">=</span> <span class="dt">Ph</span> (\k s <span class="ot">-&gt;</span> p k s <span class="ot">`bestg`</span> q k s)
+
+bestg l<span class="fu">@</span>(<span class="dt">Step</span> _) _ <span class="fu">=</span> l <span class="co">-- greeedy</span>
+bestg l r <span class="fu">=</span> best l r
+
+<span class="ot">opt ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
+p <span class="ot">`opt`</span> v <span class="fu">=</span> p <span class="fu">&lt;&lt;|&gt;</span> pure v
+
+many p  <span class="fu">=</span> (<span class="fu">:</span>) <span class="fu">&lt;$&gt;</span> p <span class="fu">&lt;*&gt;</span> many p <span class="ot">`opt`</span> [] <span class="co">-- NB greedy</span>
+<span class="ot">chainl1 ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">Parser</span> (a<span class="ot">-&gt;</span>a<span class="ot">-&gt;</span>a) <span class="ot">-&gt;</span> <span class="dt">Parser</span> a
+chainl1 pt pop <span class="fu">=</span> applyAll <span class="fu">&lt;$&gt;</span> pt <span class="fu">&lt;*&gt;</span> many (<span class="fu">flip</span> <span class="fu">&lt;$&gt;</span> pop <span class="fu">&lt;*&gt;</span> pt)</code></pre>
 </div>
 <div class="section slide level1" id="uu-parsinglib">
 <h1>UU-parsinglib</h1>
