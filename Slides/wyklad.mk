@@ -13,7 +13,7 @@ $(L).html: $(L).md
 
 $(L)-slides.html: $(L).md Makefile $(wildcard ./pandoc/slidy/*)
 	@test -f $<
-	$(PANDOC) --data-dir=../pandoc --offline -s -t slidy --mathjax -o $(DESTDIR)/$@ $<
+	$(PANDOC) --data-dir=../pandoc --self-contained -s -t slidy --mathjax -o $(DESTDIR)/$@ $<
 
 echo: 
 	echo $(MDFILE)
