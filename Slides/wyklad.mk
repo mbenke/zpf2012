@@ -9,11 +9,11 @@ all: $(L).html $(L)-slides.html
 
 $(L).html: $(L).md
 	@test -f $<
-	$(PANDOC) -s -t html --mathjax -o $(DESTDIR)/$@ $<
+	$(PANDOC) -s -t html --smart --mathjax -o $(DESTDIR)/$@ $<
 
 $(L)-slides.html: $(L).md Makefile $(wildcard ./pandoc/slidy/*)
 	@test -f $<
-	$(PANDOC) --data-dir=../pandoc --self-contained -s -t slidy --mathjax -o $(DESTDIR)/$@ $<
+	$(PANDOC) --data-dir=../pandoc --self-contained --smart -s -t slidy --mathjax -o $(DESTDIR)/$@ $<
 
 echo: 
 	echo $(MDFILE)
