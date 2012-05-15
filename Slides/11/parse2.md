@@ -4,15 +4,15 @@ Parsec:
 
 ~~~~ {.haskell}
 pExp = pNum `chainl1` addop
-addop   =   do{ char '+'; return (+) }
-          <|> do{ char '-'; return (-) }
+addop =  do{ char '+'; return (+) }
+     <|> do{ char '-'; return (-) }
 ~~~~
 
 albo
 
 ~~~~ {.haskell}
-addop   =   (const (+)) <$> char '+'
-       <|>  (const -) <$> char '-'
+addop  =  (const (+)) <$> char '+'
+      <|> (const -) <$> char '-'
 ~~~~
 
 Idiom:
@@ -36,7 +36,8 @@ parens = depth  <$>
 # Parser niedeterministyczny
 
 ~~~~ {.haskell}
-newtype Parser a = Parser{ runParser :: String -> [(a,String)]}
+newtype Parser a = Parser{ runParser :: String -> [(a,String)] }
+
 parse p name input  = case runParser p input of
   [] -> Left "no parse"
   (x:_)-> Right x
@@ -45,6 +46,13 @@ satisfy :: (Char->Bool) -> Parser Char
 satisfy p = Parser $ \s -> case s of
   (c:cs) | p c -> [(c,cs)]
   _ -> []
+
+digit :: Parser Char
+digit = satisfy isDigit
+
+test1 = runParser digit "123"
+-- >>> test1
+-- [('1',"23")]
 ~~~~
 
 # Functor
@@ -57,6 +65,12 @@ for = flip map
 instance Functor Parser where
   -- (a->b) -> Parser a -> Parser b
   fmap f p = Parser $ \s -> for (runParser p s) (first f)
+
+pNat1 :: Parser Int
+pNat1 = fmap digitToInt digit
+
+-- >>> runParser pNat1 "123"
+-- [(1,"23")]
 ~~~~
 
 # Applicative
@@ -72,12 +86,24 @@ instance Alternative Parser where
   (Parser p) <|> (Parser q) = Parser $ \s -> p s ++ q s
 ~~~~
 
-Ciągi
+* Ciągi
 
 ~~~~ {.haskell}
+opt :: Parser a -> a -> Parser a
+p `opt` v = p <|> pure v
+-- inna implementacja później
+
 many, many1 :: Parser a -> Parser [a]
-many p  = many1 p <|> pure []
-many1 p =(:) <$> p <*> many p                         
+many p  = many1 p `opt` []
+many1 p = (:) <$> p <*> many p    
+
+pNat :: Parser Int
+pNat = foldl adder 0 <$> (many1 pNat1) where
+  adder :: Int -> Int -> Int
+  adder n d = 10*n+d 
+
+-- >>> > runParser pNat "123"
+-- [(123,""),(12,"3"),(1,"23")]
 ~~~~
 
 # Funkcje pomocnicze (ogólne dla Applicative):

@@ -37,19 +37,31 @@ instance Alternative Parser where
   empty = Parser $ const []
   (Parser p) <|> (Parser q) = Parser $ \s -> p s ++ q s
   
+opt :: Parser a -> a -> Parser a
+p `opt` v = p <|> pure v
+-- inna implementacja później
+
 many, many1 :: Parser a -> Parser [a]
-many p  = many1 p <|> pure []
+many p  = many1 p `opt` []
 many1 p =(:) <$> p <*> many p
                          
 digit :: Parser Char
 digit = satisfy isDigit
 
+pNat1 :: Parser Int
+pNat1 = fmap digitToInt digit
+
+pNat :: Parser Int
+pNat = foldl adder 0 <$> (many1 pNat1) where
+  adder :: Int -> Int -> Int
+  adder n d = 10*n+d
+  
 char :: Char -> Parser Char
 char c = satisfy (==c)
 
 test1 = runParser digit "123"
-
-test2 = runParser (many1 digit) "123"
+test2 = runParser pNat1 "123"
+test3 = runParser pNat "123"
 
 -- S   ->  ( S ) S | epsilon
 parens = (\_ s _ s2 -> max (1+s) s2) <$> 
