@@ -130,38 +130,23 @@ liftA2 f a b = f <$> a <*> b
 (<**>) = liftA2 (flip ($))
 ~~~~
 
-# UU-parsinglib
-
-* Utrecht University, Doaitse Swierstra
-* [uu-parsinglib] (http://hackage.haskell.org/package/uu-parsinglib)
-
 ~~~~ {.haskell}
-class (Alternative p, Applicative p, ExtAlternative p) => IsParser p 
+addop   =  (+) <$ char '+'
+       <|> (-) <$ char '-' 
+
+chainr1 x op = x <**> f where
+  -- f :: Parser (a->a->a)
 ~~~~
 
-# ExtAlternative
-
-
-~~~~ {.haskell}
-class (Alternative p) => ExtAlternative p where
-   -- | `<<|>` is the greedy version of `<|>` (a la Parsec). 
-   (<<|>)  :: p a -> p a -> p a
-   -- |  The `<?>` combinator replaces this list of symbols by the string argument.   
-   (<?>)   :: p a -> String -> p a
-   -- | `doNotInterpret` makes a parser opaque for abstract interpretation; 
-   doNotInterpret :: p a -> p a
-   doNotInterpret = id
-   -- |  `must_be_non_empty` checks whether its second argument
-   --    is a parser which can recognise the empty input. 
-   must_be_non_empty   :: String -> p a ->        c -> c
-   must_be_non_empties :: String -> p a -> p b -> c -> c 
-   -- | If 'p' can be recognized, the return value of 'p' is used. Otherwise,
-   --   the value 'v' is used. Note that `opt` by default is greedy. 
-   opt     :: p a ->   a -> p a
-   opt p v = must_be_non_empty "opt" p (p <<|> pure v)   
-~~~~
 
 # Od DFS do DFS: Steps
+
+* Zwykle parsowanie oznacza obejście drzewa możliwości DFS-em
+
+* Zamiana na BFS może usprawnić i dac nowe możliwości
+
+* Idea: wynikiem parsera będzie ciąg kroków, leniwa ewaluacja umozliwi 
+  *równoległe* sprawdzanie składników alternatywy i wybór lepszego wariantu:
 
 ~~~~ {.haskell}
 data Steps a where 
@@ -173,15 +158,10 @@ data Steps a where
 best :: Steps a -> Steps a -> Steps a
 best Fail r = r
 best l Fail = l
-best (Step l) (Step r) = Step $ best l r -- OBS laziness!
+best (Step l) (Step r) = Step $ best l r -- NB laziness!
 best x@(Step _) (Done _) = x -- prefer longer parse
 best (Done _) x@(Step _) = x
 best _ _ = error "incorrect parser" -- ambiguity
-
-eval :: Steps a -> a
-eval (Step l) = eval l
-eval (Done v) = v
-eval Fail = error "this should not happen: eval Fail"
 ~~~~
 
 
@@ -260,6 +240,39 @@ instance Monoid (Steps a) where
 instance Alternative P where
   empty = P $ \k s -> mempty
   (P p) <|> (P q) = P (p `mappend` q)
+~~~~
+
+
+# UU-parsinglib
+
+* Utrecht University, Doaitse Swierstra
+
+<http://hackage.haskell.org/package/uu-parsinglib>
+
+~~~~ {.haskell}
+class (Alternative p, Applicative p, ExtAlternative p) => IsParser p 
+~~~~
+
+# ExtAlternative
+
+
+~~~~ {.haskell}
+class (Alternative p) => ExtAlternative p where
+   -- | `<<|>` is the greedy version of `<|>` (a la Parsec). 
+   (<<|>)  :: p a -> p a -> p a
+   -- |  The `<?>` combinator replaces this list of symbols by the string argument.   
+   (<?>)   :: p a -> String -> p a
+   -- | `doNotInterpret` makes a parser opaque for abstract interpretation; 
+   doNotInterpret :: p a -> p a
+   doNotInterpret = id
+   -- |  `must_be_non_empty` checks whether its second argument
+   --    is a parser which can recognise the empty input. 
+   must_be_non_empty   :: String -> p a ->        c -> c
+   must_be_non_empties :: String -> p a -> p b -> c -> c 
+   -- | If 'p' can be recognized, the return value of 'p' is used. Otherwise,
+   --   the value 'v' is used. Note that `opt` by default is greedy. 
+   opt     :: p a ->   a -> p a
+   opt p v = must_be_non_empty "opt" p (p <<|> pure v)   
 ~~~~
 
 # Koniec
