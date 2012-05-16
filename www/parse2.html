@@ -266,8 +266,6 @@ coaph k ((h,b2a),b) <span class="fu">=</span> k (h,b2a b)</code></pre>
 <pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">instance</span> <span class="dt">Monoid</span> b <span class="ot">=&gt;</span> <span class="dt">Monoid</span> (a <span class="ot">-&gt;</span> b) <span class="kw">where</span>
   mempty <span class="fu">=</span> <span class="fu">const</span> mempty
   mappend f g <span class="fu">=</span> \x <span class="ot">-&gt;</span>f x <span class="ot">`mappend`</span> g x</code></pre>
-<h1 id="jak-to-działa">Jak to działa</h1>
-<pre><code>pure digitToInt = Ph (\k h -&gt; k (h, digitToInt))</code></pre>
 <h1 id="odrzućmy-balast-historii">Odrzućmy balast historii</h1>
 <p>Skoro i tak używamy kontynuacji, to możemy sobie darować “przekładanie papierków”</p>
 <pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">newtype</span> <span class="dt">Ph</span> a <span class="fu">=</span> <span class="dt">Ph</span> {<span class="ot">unPh ::</span> forall r<span class="fu">.</span>
@@ -320,14 +318,43 @@ parse p name input <span class="fu">=</span>  result (runParser p input) <span c
   result (<span class="dt">Done</span> a) <span class="fu">=</span> <span class="kw">Right</span> a
   result (<span class="dt">Fail</span> msgs) <span class="fu">=</span> <span class="kw">Left</span> msgs
   result (<span class="dt">Step</span> x) <span class="fu">=</span> result x</code></pre>
+<h1 id="naprawa-błędów">Naprawa błędów</h1>
 <h1 id="uu-parsinglib">UU-parsinglib</h1>
 <ul>
 <li>Utrecht University, Doaitse Swierstra</li>
 </ul>
 <p><a href="http://hackage.haskell.org/package/uu-parsinglib"><code class="url">http://hackage.haskell.org/package/uu-parsinglib</code></a></p>
-<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">class</span> (<span class="dt">Alternative</span> p, <span class="kw">Applicative</span> p, <span class="dt">ExtAlternative</span> p) <span class="ot">=&gt;</span> <span class="dt">IsParser</span> p </code></pre>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">pNum ::</span> <span class="dt">Parser</span> <span class="dt">Int</span>
+pNum <span class="fu">=</span> <span class="fu">fmap</span> <span class="fu">digitToInt</span> digit
+
+chainl1 <span class="fu">=</span> <span class="fu">flip</span> pChainl
+pExp <span class="fu">=</span> pNum <span class="ot">`chainl1`</span> addop
+addop   <span class="fu">=</span>  (<span class="fu">+</span>) <span class="fu">&lt;$</span> char <span class="ch">&#39;+&#39;</span>
+       <span class="fu">&lt;&lt;|&gt;</span> (<span class="fu">-</span>) <span class="fu">&lt;$</span> char <span class="ch">&#39;-&#39;</span> 
+
+<span class="co">-- pEnd :: Parser [Error]</span>
+<span class="ot">doparse ::</span> <span class="dt">Parser</span> a <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> a
+doparse p name input <span class="fu">=</span> <span class="kw">let</span> 
+  extp <span class="fu">=</span> ( (,) <span class="fu">&lt;$&gt;</span> p <span class="fu">&lt;*&gt;</span> pEnd) 
+  str <span class="fu">=</span> (createStr (<span class="dt">LineColPos</span> <span class="dv">0</span> <span class="dv">0</span> <span class="dv">0</span>) input)
+  (a, errors) <span class="fu">=</span>  parse extp str 
+  <span class="kw">in</span> a <span class="co">{-case errors of</span>
+<span class="co">     [] -&gt; a</span>
+<span class="co">     (e:_) -&gt; error $ show e</span>
+<span class="co">  -}</span></code></pre>
+<h1 id="ćwiczenia">Ćwiczenia</h1>
+<ul>
+<li><p>Używając uu-parsinglib napisz parser dla wyrażeń budujący drzewo struktury.</p></li>
+<li><p>Stanem dotychczasowych parserów był zawsze <code>String</code>. Przerób je tak, by uzywały abstrakcyjnego stanu, mogącego dotatkowo przechowywać pozycję i liste błedówe, np.</p></li>
+</ul>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">class</span> <span class="dt">ParserState</span> st <span class="kw">where</span>
+<span class="ot">  splitState ::</span> st <span class="ot">-&gt;</span> <span class="dt">Maybe</span> (<span class="dt">Char</span>,st) <span class="co">-- albo Maybe(Token,st)</span>
+<span class="ot">  isEof ::</span> <span class="dt">Bool</span>
+<span class="ot">  getErrors ::</span> <span class="dt">Errors</span>  <span class="co">-- np. [String]</span></code></pre>
 <h1 id="extalternative">ExtAlternative</h1>
-<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">class</span> (<span class="dt">Alternative</span> p) <span class="ot">=&gt;</span> <span class="dt">ExtAlternative</span> p <span class="kw">where</span>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">class</span> (<span class="dt">Alternative</span> p, <span class="kw">Applicative</span> p, <span class="dt">ExtAlternative</span> p) <span class="ot">=&gt;</span> <span class="dt">IsParser</span> p 
+
+<span class="kw">class</span> (<span class="dt">Alternative</span> p) <span class="ot">=&gt;</span> <span class="dt">ExtAlternative</span> p <span class="kw">where</span>
    <span class="co">-- | `&lt;&lt;|&gt;` is the greedy version of `&lt;|&gt;` (a la Parsec). </span>
 <span class="ot">   (&lt;&lt;|&gt;)  ::</span> p a <span class="ot">-&gt;</span> p a <span class="ot">-&gt;</span> p a
    <span class="co">-- |  The `&lt;?&gt;` combinator replaces this list of symbols by the string argument.   </span>

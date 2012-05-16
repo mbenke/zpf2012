@@ -330,11 +330,6 @@ instance Monoid b => Monoid (a -> b) where
   mappend f g = \x ->f x `mappend` g x
 ~~~~
 
-# Jak to działa
-
-~~~~
-pure digitToInt = Ph (\k h -> k (h, digitToInt))
-~~~~
 
 # Odrzućmy balast historii
 
@@ -417,14 +412,47 @@ parse p name input =  result (runParser p input) where
 
 <http://hackage.haskell.org/package/uu-parsinglib>
 
+
 ~~~~ {.haskell}
-class (Alternative p, Applicative p, ExtAlternative p) => IsParser p 
+pNum :: Parser Int
+pNum = fmap digitToInt digit
+
+chainl1 = flip pChainl
+pExp = pNum `chainl1` addop
+addop   =  (+) <$ char '+'
+       <<|> (-) <$ char '-' 
+       
+-- pEnd :: Parser [Error]
+doparse :: Parser a -> String -> String -> a
+doparse p name input = let 
+  extp = ( (,) <$> p <*> pEnd) 
+  str = (createStr (LineColPos 0 0 0) input)
+  (a, errors) =  parse extp str 
+  in a {-case errors of
+     [] -> a
+     (e:_) -> error $ show e
+  -}
+~~~~
+
+# Ćwiczenia
+
+* Używając uu-parsinglib napisz parser dla wyrażeń budujący drzewo struktury.
+
+* Stanem dotychczasowych parserów był zawsze `String`. Przerób je tak, by uzywały abstrakcyjnego stanu, mogącego dotatkowo przechowywać pozycję i liste błedówe, np.
+
+~~~~ {.haskell}
+class ParserState st where
+  splitState :: st -> Maybe (Char,st) -- albo Maybe(Token,st)
+  isEof :: Bool
+  getErrors :: Errors  -- np. [String]
 ~~~~
 
 # ExtAlternative
 
 
 ~~~~ {.haskell}
+class (Alternative p, Applicative p, ExtAlternative p) => IsParser p 
+
 class (Alternative p) => ExtAlternative p where
    -- | `<<|>` is the greedy version of `<|>` (a la Parsec). 
    (<<|>)  :: p a -> p a -> p a

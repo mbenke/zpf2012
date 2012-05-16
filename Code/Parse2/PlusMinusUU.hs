@@ -17,7 +17,7 @@ gen 0 = "1"
 gen n = ('1':'+':'1':'-':gen (n-1))
 
 
--- pNum :: Parser Int
+pNum :: Parser Int
 pNum = fmap digitToInt digit
 
 chainl1 = flip pChainl
@@ -25,7 +25,8 @@ pExp = pNum `chainl1` addop
 addop   =  (+) <$ char '+'
        <<|> (-) <$ char '-' 
        
--- doparse :: Parser a -> String -> String -> a
+-- pEnd :: Parser [Error]
+doparse :: Parser a -> String -> String -> a
 doparse p name input = let 
   extp = ( (,) <$> p <*> pEnd) 
   str = (createStr (LineColPos 0 0 0) input)
