@@ -1,6 +1,6 @@
 {-# LANGUAGE ExplicitForAll, RankNTypes #-}
 {-# LANGUAGE GADTs #-} -- for syntax only
-module App4g where
+module App5 where
 import Data.Char(isDigit,digitToInt)
 
 import Applicative
