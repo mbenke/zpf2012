@@ -1,10 +1,13 @@
-BINFILES=sudoku1
+BINFILES=sudoku1 sudoku2
 GHCOPTS=-O2 -rtsopts -threaded
+
+%: %.hs
+	ghc $(GHCOPTS) -o $@ --make $^
 
 all: $(BINFILES)
 
-sudoku1: sudoku1.hs
-	ghc $(GHCOPTS) -o $@ --make $^
+#sudoku1: sudoku1.hs
+#	ghc $(GHCOPTS) -o $@ --make $^
 
 
 clean:
