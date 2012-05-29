@@ -1,4 +1,5 @@
-BINFILES=sudoku1 sudoku2 sudoku2b sudoku3 sudoku3b
+BINFILES=sudoku1 sudoku2 sudoku2b sudoku3 sudoku3b fork \
+  geturls1 geturls2 sudoku-par2 sudoku-par3
 GHCOPTS=-O2 -rtsopts -threaded
 
 %: %.hs

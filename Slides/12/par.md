@@ -17,10 +17,6 @@ physical processors.
 
 --- Simon Marlow, *Parallel and Concurrent Programming in Haskell*.
 
-# Równoległość w Haskellu
-
-Tu zajmujemy się głównie równoległościę, czyli wykorzystaniem wielu rdzeni/procesorów dla przyśpieszenia obliczeń.
-
 # Sudoku
 
 Przykład z dużą ilościa obliczeń: rozwiązywanie Sudoku
@@ -51,6 +47,38 @@ $ ./sudoku1 sudoku17.1000.txt +RTS -s
   Total   time    2.37s  (  2.37s elapsed)
 ~~~~
 
+# Monada `Eval` --- strategie obliczeń
+
+~~~~ {.haskell}
+-- Control.Parallel.Strategies
+data Eval a
+instance Monad Eval
+
+runEval :: Eval a
+rseq :: a -> Eval a  -- "w tym wątku"
+rpar :: a -> Eval a  --  "w nowym wątku"
+~~~~
+
+Wywołanie leniwej funkcji w nowym wątku ma mało sensu
+
+Musimy sterować ilością obliczeń
+
+# deepseq & friends
+
+~~~~ {.haskell}
+seq :: a -> b -> b
+-- Control.DeepSeq
+class NFData a where
+    rnf :: a -> ()
+    rnf a = a `seq` ()
+deepseq :: NFData a => a -> b -> b
+
+-- Control.Exception
+-- Forces its argument to be evaluated to weak head normal form 
+-- when the resultant IO action is executed.
+evaluate :: a -> IO a
+~~~~
+
 # Program równoległy
 
 ~~~~ {.haskell}
@@ -66,6 +94,303 @@ main = do
        rseq a
        rseq b
        return ()
+~~~~
+
+Tworzymy tu dwa wątki, w GHC nazywane "sparks" (to są lekkie wątki, nie wątki systemowe).
+
+# Wyniki
+
+~~~~
+                        MUT time (elapsed)       GC time  (elapsed)
+  Task  0 (worker) :    2.08s    (  1.27s)       0.38s    (  0.41s)
+  Task  1 (worker) :    2.43s    (  1.64s)       0.06s    (  0.07s)
+  Task  2 (bound)  :    2.44s    (  1.66s)       0.04s    (  0.05s)
+  Task  3 (worker) :    2.49s    (  1.70s)       0.00s    (  0.00s)
+
+  SPARKS: 2 (1 converted, 0 dud, 0 GC'd, 1 fizzled)
+
+  INIT    time    0.00s  (  0.00s elapsed)
+  MUT     time    2.43s  (  1.64s elapsed)
+  GC      time    0.06s  (  0.06s elapsed)
+  EXIT    time    0.00s  (  0.00s elapsed)
+  Total   time    2.49s  (  1.70s elapsed)
+
+  Alloc rate    478,082,040 bytes per MUT second
+
+  Productivity  97.6% of total user, 142.7% of total elapsed
+~~~~
+
+# Iskry
+
+* Nowa "iskra" jest tworzona prz kazdym użyciu rpar
+
+* Gdy tylko system ma jakąś wolną jednostkę (procesor, rdzeń, etc), przydzielamy mu iskrę z kolejki (to jest "converted").
+
+* Jedna jednostka zawsze zajęta przez główny wątek
+
+Tworzenie iskier mioże się nie powieść z powodu
+
+* przepełnienia kolejki (overflow)
+
+* wyrażenie zostało już obliczone (dud)
+
+# Kolejka iskier
+
+Iskry z kolejki mogą zostać 
+
+* "skonwertowane" (converted)
+
+* obliczone poza kolejką (fizzle)
+
+* odśmiecone (GC)
+
+~~~~
+  SPARKS: 2 (1 converted, 0 dud, 0 GC'd, 1 fizzled)
+
+  Total   time    2.49s  (  1.70s elapsed)
+
+  Productivity  97.6% of total user, 142.7% of total elapsed
+~~~~
+
+Zauważmy, że ciągle odłogiem leży "pół rdzenia".
+
+# Dynamiczny podział pracy
+
+~~~~ {.haskell}
+parMap :: (a -> b) -> [a] -> Eval [b]
+parMap f [] = return []
+parMap f (a:as) = do
+   b <- rpar (f a)
+   bs <- parMap f as
+   return (b:bs)
+~~~~
+
+Obliczenie:
+
+~~~~ {.haskell}
+    evaluate $ force $ runEval $ parMap solve grids
+~~~~
+
+~~~~
+  SPARKS: 1000 (995 converted, 0 dud, 0 GC'd, 5 fizzled)
+
+  Total   time    2.20s  (  1.22s elapsed)
+
+  Productivity  94.2% of total user, 169.0% of total elapsed
+~~~~
+
+Lepsza produktywność, poza tym łatwiej skalować na więcej rdzeni:
+
+~~~~
+./sudoku2b sudoku17.1000.txt +RTS -N8 -s
+  Productivity  58.2% of total user, 218.2% of total elapsed
+
+[ben@students Marlow]$ ./sudoku3b sudoku17.1000.txt +RTS -N8 -s
+ Productivity  63.6% of total user, 487.4% of total elapsed
+~~~~
+
+# Strategie
+
+Dodatkowy poziom abstrakcji zbudowany na monadzie `Eval`
+
+~~~~ {.haskell}
+type Strategy a = a -> Eval 
+rseq :: Strategy a
+rpar :: Strategy a
+r0 :: Strategy a
+r0 x = return x
+rdeepseq :: NFData a => Strategy a
+rdeepseq = rseq(deep x)
+
+using :: a -> Strategy a -> a
+x `using` s = runEval (s x)
+~~~~
+
+Zaletą takiego podejścia jest to, że "using s" można usuwać (prawie) bez zmian semantyki (program może się najwyżej stać "bardziej zdefiniowany")
+
+# Równoległe przetwarzenie listy
+
+~~~~ {.haskell}
+parMap f xs = map f xs `using` parList rseq
+
+-- Control.Parallel.Strategies
+parList :: Strategy a -> Strategy [a]
+parList strat [] = return []
+parList strat (x:xs) = do
+	x' <- rpar (x `using` strat)
+	xs' <- parList strat xs
+	return (x':xs)
+~~~~
+
+# Ćwiczenie
+
+Napisz funkcję rozmieszczającą n hetmanów na szachownicy n*n
+
+* sekwencyjnie
+
+* równolegle
+
+~~~~ {.haskell}
+type PartialSolution = [Int]
+type Solution = PartialSolution
+type BoardSize = Int
+
+queens :: BoardSize -> [Solution]
+queens n = iterate (concatMap (addQueen n)) [[ ]] !! n
+
+addQueen :: BoardSize -> PartialSolution -> [PartialSolution]
+addQueen n s = [x : s | x <- [1..n], safe x s 1]
+
+safe :: Int -> PartialSolution -> Int -> Bool
+safe x [] n = True
+safe x (c : y) n = x /= c && x /= c + n 
+       && x /= c - n && safe x y (n + 1)
+~~~~
+
+# Współbieżność
+
+~~~~ {.haskell}
+import Control.Concurrent
+-- forkIO LL IO() -> IO ThreadId
+import Control.Monad
+import System.IO
+
+main = do
+  hSetBuffering stdout NoBuffering
+  forkIO $ forever $ putChar 'A'
+  forkIO $ forever $ putChar 'B'
+  threadDelay (10^6)
+~~~~
+
+# Synchronizacja: `MVar`
+
+Jednoelementowy bufor/semafor:
+
+~~~~ {.haskell}
+data MVar a
+newMVar :: a -> IO (MVar a)
+takeMVar ::  MVar a -> IO a 
+putMVar :: MVar a -> a -> IO ()
+~~~~
+
+`stdout` jest chronione MVar, dlatego w poprzednim  przykładzie A i B rozkładają się w miarę równo.
+
+# Asynchroniczne I/O
+
+~~~~ {.haskell}
+import GetURL(getURL)
+import Control.Concurrent
+
+main = do
+  m1 <- newEmptyMVar
+  m2 <- newEmptyMVar  
+  forkIO $ do 
+    r <- getURL "http://www.wikipedia.com/wiki/Shovel"
+    putMVar m1 r
+    
+  forkIO $ do 
+    r <- getURL "http://www.wikipedia.com/wiki/Spade"
+    putMVar m2 r
+
+  r1 <- takeMVar m1
+  print "1 DONE"  
+  r2 <- takeMVar m2
+  print "2 DONE"
+~~~~
+
+# Ładniej
+
+~~~~ {.haskell}
+data Async a = Async (MVar a)
+
+async :: IO a -> IO (Async a)
+async action = do
+   var <- newEmptyMVar
+   forkIO (action >>= putMVar var)
+   return (Async var)
+
+wait :: Async a -> IO a
+wait (Async var) = readMVar var
+
+main = do
+  m1 <- async $ getURL "http://www.wikipedia.com/wiki/Shovel"
+  m2 <- async $ getURL "http://www.wikipedia.com/wiki/Spade"
+  wait m1
+  print "1 DONE"  
+  wait m2
+  print "2 DONE"
+~~~~
+
+# Równoległość danych: monada Par
+
+Element pośredni pomiędzy `Eval` a `Concurrent`: jawne tworzenie wątków, ale z zachowaniem determinizmu
+
+~~~~ {.haskell}
+newtype Par a
+instance Functor Par
+instance Applicative Par
+instance Monad Par
+
+runPar :: Par a -> a
+fork :: Par () -> Par ()
+~~~~
+
+# Komunikacja --- IVar
+
+~~~~ {.haskell}
+data IVar a
+new :: Par (IVar a)
+put :: NFData a => IVar a -> a -> Par ()
+get :: IVar a -> Par a
+~~~~
+
+* `new` tworzy nową , pustą zmienną
+
+* `put` wypełnia ją wartością (mozna tylko raz)
+
+* `get` pobiera wartość, ewentualnie czekając
+
+# Sudoku z użyciem `Par`
+
+~~~~ {.haskell}
+main = do
+    [f] <- getArgs
+    grids <- fmap lines $ readFile f
+
+    let (as,bs) = splitAt (length grids `div` 2) grids
+
+    print $ length $ filter isJust $ runPar $ do
+       i1 <- new
+       i2 <- new
+       fork $ put i1 (map solve as)
+       fork $ put i2 (map solve bs)
+       as' <- get i1
+       bs' <- get i2
+       return (as' ++ bs')
+
+--   Productivity  96.3% of total user, 141.2% of total elapsed
+~~~~
+
+# parMap
+
+~~~~ {.haskell}
+spawn :: NFData a => Par a -> Par (IVar a)
+spawn p = do
+      i <- new
+      fork (p >>= put i)
+      return i
+
+parMapM f as = do
+	ibs <- mapM (spawn . f) as
+	mapM get ibs
+
+-- Control.Monad.Par.parMap
+main = do
+    [f] <- getArgs
+    grids <- fmap lines $ readFile f
+    print (length (filter isJust (runPar $ parMap solve grids)))
+
+-- Productivity  95.8% of total user, 173.1% of total elapsed
 ~~~~
 
 # Koniec
