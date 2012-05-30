@@ -1,11 +1,10 @@
-BINFILES=parfib
-GHCOPTS=-O -rtsopts -threaded
+BINFILES=parfib badfib
+GHCOPTS=-O2 -rtsopts -threaded
 
-all: $(BINFILES)
-
-parfib: parfib.hs
+%: %.hs
 	ghc $(GHCOPTS) -o $@ --make $^
 
+all: $(BINFILES)
 
 clean:
 	-rm -f *.hi *.o *~
