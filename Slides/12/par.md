@@ -1,4 +1,4 @@
-# Równoległość a współbieżność
+2# Równoległość a współbieżność
 
 A *parallel* program is one that uses a multiplicity of computational
 hardware (e.g. multiple processor cores) in order to perform
@@ -33,6 +33,7 @@ main = do
 ~~~~
 
 ~~~~
+$ ghc -O2 -threaded --make sudoku1.hs
 $ ./sudoku1 sudoku17.1000.txt +RTS -s
   Task  0 (worker) :    0.00s    (  0.00s)       0.00s    (  0.00s)
   Task  1 (worker) :    0.00s    (  2.37s)       0.00s    (  0.00s)
@@ -82,6 +83,7 @@ evaluate :: a -> IO a
 # Program równoległy
 
 ~~~~ {.haskell}
+import Control.Parallel.Strategies  -- cabal install parallel
 main = do
     [f] <- getArgs
     grids <- fmap lines $ readFile f
@@ -98,9 +100,13 @@ main = do
 
 Tworzymy tu dwa wątki, w GHC nazywane "sparks" (to są lekkie wątki, nie wątki systemowe).
 
+
 # Wyniki
 
 ~~~~
+$ ghc -O2 -rtsopts -threaded --make sudoku2.hs
+$ ./sudoku2 sudoku17.1000.txt +RTS -N2 -s -RTS
+
                         MUT time (elapsed)       GC time  (elapsed)
   Task  0 (worker) :    2.08s    (  1.27s)       0.38s    (  0.41s)
   Task  1 (worker) :    2.43s    (  1.64s)       0.06s    (  0.07s)
@@ -109,10 +115,6 @@ Tworzymy tu dwa wątki, w GHC nazywane "sparks" (to są lekkie wątki, nie wątk
 
   SPARKS: 2 (1 converted, 0 dud, 0 GC'd, 1 fizzled)
 
-  INIT    time    0.00s  (  0.00s elapsed)
-  MUT     time    2.43s  (  1.64s elapsed)
-  GC      time    0.06s  (  0.06s elapsed)
-  EXIT    time    0.00s  (  0.00s elapsed)
   Total   time    2.49s  (  1.70s elapsed)
 
   Alloc rate    478,082,040 bytes per MUT second
@@ -144,6 +146,11 @@ Iskry z kolejki mogą zostać
 
 * odśmiecone (GC)
 
+# 
+
+![](spark-lifecycle.png "Life cycle of a spark")
+
+# sudoku2.hs
 ~~~~
   SPARKS: 2 (1 converted, 0 dud, 0 GC'd, 1 fizzled)
 
@@ -153,6 +160,20 @@ Iskry z kolejki mogą zostać
 ~~~~
 
 Zauważmy, że ciągle odłogiem leży "pół rdzenia".
+
+Threadscope
+
+* Narzędzie do analizy wykonania programu równoległego
+
+~~~~
+$ ./sudoku2 sudoku17.1000.txt +RTS -N2 -ls
+$ threadscope sudoku2.eventlog &
+$ ~/.cabal/bin/threadscope sudoku2.eventlog &
+~~~~
+
+# Threadscope - sudoku2
+
+![](sudoku2.png "sudoku2.eventlog")
 
 # Dynamiczny podział pracy
 
@@ -189,6 +210,14 @@ Lepsza produktywność, poza tym łatwiej skalować na więcej rdzeni:
  Productivity  63.6% of total user, 487.4% of total elapsed
 ~~~~
 
+# Threadscope - sudoku3
+
+![](sudoku3.png "sudoku3.eventlog")
+
+# Threadscope - sudoku3 -N8
+
+![](sudoku3-N8.png "sudoku3-N8.eventlog")
+
 # Strategie
 
 Dodatkowy poziom abstrakcji zbudowany na monadzie `Eval`
@@ -221,6 +250,73 @@ parList strat (x:xs) = do
 	xs' <- parList strat xs
 	return (x':xs)
 ~~~~
+
+# Uwaga
+
+Iskry są bardzo tanie, ale mimo wszystko nie należy tworzyć ich zbyt wiele
+
+~~~~ {.haskell}
+parFib n | n < 2 = n
+parFib n = p `par` q `pseq` (p + q)
+    where
+      p = parFib $ n - 1
+      q = parFib $ n - 2
+
+main :: IO ()
+main = print $ parFib 40
+~~~~
+
+~~~~
+$ ./badfib +RTS -N2 -s -RTS
+
+  3,321,319,864 bytes allocated in the heap
+      1,173,852 bytes copied during GC
+  Parallel GC work balance: 1.75 (277333 / 158455, ideal 2)
+
+  SPARKS: 166058569 (222 converted, 113019108 overflowed, 0 dud, 51863340 GC'd, 1175899 fizzled)
+  Total   time    5.49s  (  2.75s elapsed)
+  Productivity  90.2% of total user, 180.0% of total elapsed
+~~~~
+
+# Lepiej
+
+~~~~ {.haskell}
+cutoff :: Int
+cutoff = 20
+
+parFib :: Int -> Int
+parFib n | n < cutoff = fib n
+parFib n = p `par` q `pseq` (p + q)
+    where
+      p = parFib $ n - 1
+      q = parFib $ n - 2
+
+fib :: Int -> Int
+fib 0 = 0
+fib 1 = 1
+fib n = fib (n - 1) + fib (n - 2)
+~~~~
+
+# Threadscope
+
+~~~~
+$ ghc -O2 -threaded -eventlog --make badfib.hs
+$ ./badfib +RTS -N2 -ls
+$ ~/.cabal/bin/threadscope badfib.eventlog
+~~~~
+
+![threadscope:badfib](badfib.png "Threadscope")
+
+# Threadscope
+
+~~~~
+$ ghc -O2 -threaded -eventlog --make parfib.hs
+$ ./parfib +RTS -N2 -ls
+$ ~/.cabal/bin/threadscope parfib.eventlog
+~~~~
+
+![threadscope:badfib](parfib.png "Threadscope")
+
 
 # Ćwiczenie
 
