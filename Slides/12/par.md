@@ -273,7 +273,8 @@ $ ./badfib +RTS -N2 -s -RTS
       1,173,852 bytes copied during GC
   Parallel GC work balance: 1.75 (277333 / 158455, ideal 2)
 
-  SPARKS: 166058569 (222 converted, 113019108 overflowed, 0 dud, 51863340 GC'd, 1175899 fizzled)
+  SPARKS: 166058569 (222 converted, 113019108 overflowed, 0 dud, 
+                     51863340 GC'd, 1175899 fizzled)
   Total   time    5.49s  (  2.75s elapsed)
   Productivity  90.2% of total user, 180.0% of total elapsed
 ~~~~
@@ -284,17 +285,24 @@ $ ./badfib +RTS -N2 -s -RTS
 cutoff :: Int
 cutoff = 20
 
-parFib :: Int -> Int
 parFib n | n < cutoff = fib n
 parFib n = p `par` q `pseq` (p + q)
     where
       p = parFib $ n - 1
       q = parFib $ n - 2
 
-fib :: Int -> Int
-fib 0 = 0
-fib 1 = 1
+fib n | n<2 = n
 fib n = fib (n - 1) + fib (n - 2)
+~~~~
+
+~~~~
+         911,348 bytes allocated in the heap
+              20 bytes copied during GC
+
+SPARKS: 29892 (21 converted, 5065 overflowed, 0 dud, 18 GC'd, 24788 fizzled)
+
+Total   time    1.73s  (  0.87s elapsed)
+Productivity 100.0% of total user, 198.8% of total elapsed
 ~~~~
 
 # Threadscope

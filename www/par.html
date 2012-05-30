@@ -212,24 +212,29 @@ main <span class="fu">=</span> <span class="fu">print</span> <span class="fu">$<
       1,173,852 bytes copied during GC
   Parallel GC work balance: 1.75 (277333 / 158455, ideal 2)
 
-  SPARKS: 166058569 (222 converted, 113019108 overflowed, 0 dud, 51863340 GC&#39;d, 1175899 fizzled)
+  SPARKS: 166058569 (222 converted, 113019108 overflowed, 0 dud, 
+                     51863340 GC&#39;d, 1175899 fizzled)
   Total   time    5.49s  (  2.75s elapsed)
   Productivity  90.2% of total user, 180.0% of total elapsed</code></pre>
 <h1 id="lepiej">Lepiej</h1>
 <pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">cutoff ::</span> <span class="dt">Int</span>
 cutoff <span class="fu">=</span> <span class="dv">20</span>
 
-<span class="ot">parFib ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
 parFib n <span class="fu">|</span> n <span class="fu">&lt;</span> cutoff <span class="fu">=</span> fib n
 parFib n <span class="fu">=</span> p <span class="ot">`par`</span> q <span class="ot">`pseq`</span> (p <span class="fu">+</span> q)
     <span class="kw">where</span>
       p <span class="fu">=</span> parFib <span class="fu">$</span> n <span class="fu">-</span> <span class="dv">1</span>
       q <span class="fu">=</span> parFib <span class="fu">$</span> n <span class="fu">-</span> <span class="dv">2</span>
 
-<span class="ot">fib ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
-fib <span class="dv">0</span> <span class="fu">=</span> <span class="dv">0</span>
-fib <span class="dv">1</span> <span class="fu">=</span> <span class="dv">1</span>
+fib n <span class="fu">|</span> n<span class="fu">&lt;</span><span class="dv">2</span> <span class="fu">=</span> n
 fib n <span class="fu">=</span> fib (n <span class="fu">-</span> <span class="dv">1</span>) <span class="fu">+</span> fib (n <span class="fu">-</span> <span class="dv">2</span>)</code></pre>
+<pre><code>         911,348 bytes allocated in the heap
+              20 bytes copied during GC
+
+SPARKS: 29892 (21 converted, 5065 overflowed, 0 dud, 18 GC&#39;d, 24788 fizzled)
+
+Total   time    1.73s  (  0.87s elapsed)
+Productivity 100.0% of total user, 198.8% of total elapsed</code></pre>
 <h1 id="threadscope">Threadscope</h1>
 <pre><code>$ ghc -O2 -threaded -eventlog --make badfib.hs
 $ ./badfib +RTS -N2 -ls
