@@ -26,7 +26,7 @@ code > span.er { color: #ff0000; font-weight: bold; }
   </style>
 </head>
 <body>
-<p>2# Równoległość a współbieżność</p>
+<h1 id="równoległość-a-współbieżność">Równoległość a współbieżność</h1>
 <p>A <em>parallel</em> program is one that uses a multiplicity of computational hardware (e.g. multiple processor cores) in order to perform computation more quickly. Different parts of the computation are delegated to different processors that execute at the same time (in parallel), so that results may be delivered earlier than if the computation had been performed sequentially.</p>
 <p>In contrast, <em>concurrency</em> is a program-structuring technique in which there are multiple threads of control. Notionally the threads of control execute “at the same time”; that is, the user sees their effects interleaved. Whether they actually execute at the same time or not is an implementation detail; a concurrent program can execute on a single processor through interleaved execution, or on multiple physical processors.</p>
 <p>— Simon Marlow, <em>Parallel and Concurrent Programming in Haskell</em>.</p>

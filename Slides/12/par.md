@@ -1,4 +1,4 @@
-2# Równoległość a współbieżność
+# Równoległość a współbieżność
 
 A *parallel* program is one that uses a multiplicity of computational
 hardware (e.g. multiple processor cores) in order to perform
