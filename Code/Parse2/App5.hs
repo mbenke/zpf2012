@@ -6,9 +6,10 @@ import Data.Char(isDigit,digitToInt)
 import Applicative
 import Monoid
 
+type Errors = [String]
 data Steps a where 
   Step :: Steps a -> Steps a
-  Fail :: [String] -> Steps a
+  Fail :: Errors -> Steps a
   Done :: a -> Steps a
   deriving Show
 
@@ -47,9 +48,10 @@ newtype Ph a = Ph {unPh :: forall r.
 type Parser a = Ph a
 
 runParser :: Ph a -> String -> Steps a
-runParser (Ph p) input = p (\a s -> checkEmpty a s) input where
-  checkEmpty a [] = Done a
-  checkEmpty a _ = Fail ["expected EOF"]
+runParser (Ph p) input = p finish input where
+  finish :: a -> String -> Steps a
+  finish a [] = Done a
+  finish a _ = Fail ["expected EOF"]
 
 parse :: Ph a -> String -> String -> Either [String] a
 parse p name input =  result (runParser p input) where
@@ -68,6 +70,14 @@ eof = Ph $ \k s -> case s of
  [] -> k () []
  _ -> Fail ["expected eof"]
 
+{-
+pEnd :: Ph Errors
+pEnd = Ph $ \k s ->
+  case s of
+ [] -> case k [] [] of
+   Fail es -> 
+ _ -> Done ["expected eof"]
+-}
 first :: (a->b) -> (a,c) -> (b,c)
 first f (a,c) = (f a,c)
 second :: (a->b) -> (d,a) -> (d,b)
