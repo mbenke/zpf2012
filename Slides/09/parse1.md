@@ -15,7 +15,9 @@ albo, używając transformatorów monad
 type Parser a = StateT [Char] (ErrorT String []) a
 ~~~~
 
-oraz kombinatory (funkcje) reprezentujące elementarne parsery i~sposoby łączenia parserów:
+# Kombinatory parsujące
+
+oraz kombinatory (funkcje) reprezentujące elementarne parsery i sposoby łączenia parserów:
 
 ~~~~ {.haskell}
 item :: Parser Char
