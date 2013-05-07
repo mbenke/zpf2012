@@ -26,7 +26,16 @@ eof :: Parser ()
 satisfy :: (Char->Bool) -> Parser Char
 char :: Char -> Parser Char
 char x = satisfy (==x)
-many, many1 :: Parser a -> Parser [a]\
+many, many1 :: Parser a -> Parser [a]
+~~~~
+
+~~~~
+> testP eof ""
+Ok () ""
+> testP item ""
+Error "unexpected EOF"
+> testP item "p"
+Ok 'p' ""
 ~~~~
 
 # Parsec
